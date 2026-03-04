@@ -1,8 +1,7 @@
 {
-  "buildCommand": "cd apps/web && npm run build",
+  "buildCommand": "npm run build -w @delivro/web",
   "outputDirectory": "apps/web/.next",
   "installCommand": "npm install",
-  "framework": "nextjs",
   "rewrites": [
     {
       "source": "/api/:path*",
