@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleType {
+  SUPER_ADMIN
+  ADMIN
+  SHOP_OWNER
+  DELIVERY_MAN
+  CUSTOMER
+}
+
+enum ProductCategory {
+  FOOD
+  GROCERIES
+  STATIONARY
+  MEDICINE
+  WEAR
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  STRIPE
+  BKASH
+  NAGAD
+  ROCKET
+  BANK
+  COD
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING_VERIFICATION
+  VERIFIED
+  FAILED
+  REFUNDED
+}
+
+enum DeliveryStatus {
+  ASSIGNED
+  PICKED_UP
+  ON_THE_WAY
+  DELIVERED
+}
+
+model User {
+  id               String      @id @default(cuid())
+  email            String?     @unique
+  phone            String?     @unique
+  passwordHash     String?
+  googleId         String?     @unique
+  isVerified       Boolean     @default(false)
+  role             RoleType
+  isActive         Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  adminPermissions AdminPermission[]
+  products         Product[]
+  customerOrders   Order[]     @relation("CustomerOrders")
+  ownerOrders      Order[]     @relation("OwnerOrders")
+  deliveries       Delivery[]
+  payments         Payment[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+}
+
+model AdminPermission {
+  id          String   @id @default(cuid())
+  userId      String
+  key         String
+  canRead     Boolean  @default(false)
+  canWrite    Boolean  @default(false)
+  canDelete   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([key])
+}
+
+model Product {
+  id          String          @id @default(cuid())
+  ownerId     String
+  name        String
+  description String
+  category    ProductCategory
+  price       Decimal         @db.Decimal(10, 2)
+  images      String[]
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  inventory Inventory?
+  items     OrderItem[]
+
+  @@index([ownerId])
+  @@index([category])
+}
+
+model Inventory {
+  id          String   @id @default(cuid())
+  productId   String   @unique
+  stock       Int
+  reserved    Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  customerId       String
+  ownerId          String
+  status           OrderStatus @default(PENDING)
+  subtotal         Decimal     @db.Decimal(10, 2)
+  deliveryFee      Decimal     @db.Decimal(10, 2)
+  total            Decimal     @db.Decimal(10, 2)
+  estimatedMinutes Int?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  customer User @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Restrict)
+  owner    User @relation("OwnerOrders", fields: [ownerId], references: [id], onDelete: Restrict)
+
+  items     OrderItem[]
+  payment   Payment?
+  delivery  Delivery?
+
+  @@index([customerId])
+  @@index([ownerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id                 String        @id @default(cuid())
+  orderId            String        @unique
+  userId             String
+  method             PaymentMethod
+  status             PaymentStatus @default(INITIATED)
+  amount             Decimal       @db.Decimal(10, 2)
+  transactionId      String?
+  stripePaymentId    String?
+  mobileReference    String?
+  verificationLog    Json?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([method])
+  @@index([status])
+}
+
+model Delivery {
+  id                String         @id @default(cuid())
+  orderId           String         @unique
+  deliveryManId     String
+  status            DeliveryStatus @default(ASSIGNED)
+  currentLat        Float?
+  currentLng        Float?
+  etaMinutes        Int?
+  lastTrackedAt     DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  order       Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deliveryMan User  @relation(fields: [deliveryManId], references: [id], onDelete: Restrict)
+
+  @@index([deliveryManId])
+  @@index([status])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  channel     String
+  payload     Json?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  resource    String
+  resourceId  String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

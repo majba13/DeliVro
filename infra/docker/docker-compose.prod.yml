@@ -1,0 +1,68 @@
+version: '3.9'
+services:
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: services/api-gateway/Dockerfile
+    ports:
+      - "4000:4000"
+    env_file:
+      - ../../.env
+
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: services/auth-service/Dockerfile
+    env_file:
+      - ../../.env
+
+  product-service:
+    build:
+      context: ../..
+      dockerfile: services/product-service/Dockerfile
+    env_file:
+      - ../../.env
+
+  order-service:
+    build:
+      context: ../..
+      dockerfile: services/order-service/Dockerfile
+    env_file:
+      - ../../.env
+
+  payment-service:
+    build:
+      context: ../..
+      dockerfile: services/payment-service/Dockerfile
+    env_file:
+      - ../../.env
+
+  delivery-service:
+    build:
+      context: ../..
+      dockerfile: services/delivery-service/Dockerfile
+    env_file:
+      - ../../.env
+
+  ai-service:
+    build:
+      context: ../..
+      dockerfile: services/ai-service/Dockerfile
+    env_file:
+      - ../../.env
+
+  notification-service:
+    build:
+      context: ../..
+      dockerfile: services/notification-service/Dockerfile
+    env_file:
+      - ../../.env
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../../.env

@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/web" },
+    { "path": "./services/api-gateway" },
+    { "path": "./services/auth-service" },
+    { "path": "./services/product-service" },
+    { "path": "./services/order-service" },
+    { "path": "./services/payment-service" },
+    { "path": "./services/delivery-service" },
+    { "path": "./services/ai-service" },
+    { "path": "./services/notification-service" }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "delivro-platform",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @delivro/api-gateway\" \"npm run dev -w @delivro/auth-service\" \"npm run dev -w @delivro/product-service\" \"npm run dev -w @delivro/order-service\" \"npm run dev -w @delivro/payment-service\" \"npm run dev -w @delivro/delivery-service\" \"npm run dev -w @delivro/ai-service\" \"npm run dev -w @delivro/notification-service\" \"npm run dev -w @delivro/web\"",
+    "dev:web": "npm run dev -w @delivro/web",
+    "dev:api": "concurrently \"npm run dev -w @delivro/api-gateway\" \"npm run dev -w @delivro/auth-service\" \"npm run dev -w @delivro/product-service\" \"npm run dev -w @delivro/order-service\" \"npm run dev -w @delivro/payment-service\" \"npm run dev -w @delivro/delivery-service\" \"npm run dev -w @delivro/ai-service\" \"npm run dev -w @delivro/notification-service\"",
+    "build": "npm run build -ws --if-present",
+    "lint": "npm run lint -ws --if-present",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "db:generate": "npm run db:generate -w @delivro/db",
+    "db:migrate": "npm run db:migrate -w @delivro/db"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^7.0.11",
+    "concurrently": "^9.1.2"
+  }
+}
