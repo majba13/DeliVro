@@ -100,7 +100,7 @@ export async function PATCH(
   // Sync order status when delivered
   if (body.data.status === "DELIVERED") {
     await prisma.order.update({ where: { id: orderId }, data: { status: "DELIVERED" } });
-  } else if (body.data.status === "OUT_FOR_DELIVERY" || body.data.status === "PICKED_UP") {
+  } else if (body.data.status === "ON_THE_WAY" || body.data.status === "PICKED_UP") {
     await prisma.order.update({ where: { id: orderId }, data: { status: "OUT_FOR_DELIVERY" } });
   }
 

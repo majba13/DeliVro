@@ -76,16 +76,16 @@ export async function POST(req: NextRequest) {
     }
 
     const passwordHash = await bcrypt.hash(body.password, 12);
-    const user = await (prisma.user.create as any)({
+    const user = await prisma.user.create({
       data: {
         name: body.name ?? null,
         email: body.email ?? null,
         phone: body.phone ?? null,
         passwordHash,
-        role: dbRole,
+        role: dbRole as any,
         isVerified: true,
       },
-    }) as any;
+    });
 
     const accessToken = await new SignJWT({ sub: user.id, role: user.role })
       .setProtectedHeader({ alg: "HS256" })
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
         refreshToken,
         user: {
           id: user.id,
-          name: (user as any).name ?? user.email?.split("@")[0] ?? "User",
+          name: user.name ?? user.email?.split("@")[0] ?? "User",
           email: user.email,
           phone: user.phone,
           role: ROLE_DISPLAY[user.role] ?? user.role,

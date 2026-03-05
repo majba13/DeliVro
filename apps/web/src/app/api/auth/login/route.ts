@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       refreshToken,
       user: {
         id: user.id,
-        name: (user as any).name ?? user.email?.split("@")[0] ?? "User",
+        name: user.name ?? user.email?.split("@")[0] ?? "User",
         email: user.email,
         phone: user.phone,
         role: ROLE_DISPLAY[user.role] ?? user.role,
