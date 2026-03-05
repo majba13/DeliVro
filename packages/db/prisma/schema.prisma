@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
@@ -58,7 +58,7 @@ enum DeliveryStatus {
 }
 
 model User {
-  id               String      @id @default(cuid())
+  id               String      @id @default(cuid()) @map("_id")
   name             String?
   email            String?     @unique
   phone            String?     @unique
@@ -83,7 +83,7 @@ model User {
 }
 
 model AdminPermission {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   userId      String
   key         String
   canRead     Boolean  @default(false)
@@ -98,12 +98,12 @@ model AdminPermission {
 }
 
 model Product {
-  id          String          @id @default(cuid())
+  id          String          @id @default(cuid()) @map("_id")
   ownerId     String
   name        String
   description String
   category    ProductCategory
-  price       Decimal         @db.Decimal(10, 2)
+  price       Float
   images      String[]
   isActive    Boolean         @default(true)
   createdAt   DateTime        @default(now())
@@ -119,7 +119,7 @@ model Product {
 }
 
 model Inventory {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   productId   String   @unique
   stock       Int
   reserved    Int      @default(0)
@@ -129,11 +129,11 @@ model Inventory {
 }
 
 model CartItem {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @map("_id")
   userId    String
   productId String
   quantity  Int      @default(1)
-  price     Decimal  @db.Decimal(10, 2)
+  price     Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -145,20 +145,20 @@ model CartItem {
 }
 
 model Order {
-  id               String      @id @default(cuid())
+  id               String      @id @default(cuid()) @map("_id")
   customerId       String
   ownerId          String
   status           OrderStatus @default(PENDING)
-  subtotal         Decimal     @db.Decimal(10, 2)
-  deliveryFee      Decimal     @db.Decimal(10, 2)
-  total            Decimal     @db.Decimal(10, 2)
+  subtotal         Float
+  deliveryFee      Float
+  total            Float
   deliveryAddress  Json?
   estimatedMinutes Int?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  customer User @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Restrict)
-  owner    User @relation("OwnerOrders", fields: [ownerId], references: [id], onDelete: Restrict)
+  customer User @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: NoAction)
+  owner    User @relation("OwnerOrders", fields: [ownerId], references: [id], onDelete: NoAction)
 
   items     OrderItem[]
   payment   Payment?
@@ -171,26 +171,26 @@ model Order {
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   orderId     String
   productId   String
   quantity    Int
-  unitPrice   Decimal  @db.Decimal(10, 2)
+  unitPrice   Float
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [productId], references: [id], onDelete: NoAction)
 
   @@index([orderId])
   @@index([productId])
 }
 
 model Payment {
-  id                 String        @id @default(cuid())
+  id                 String        @id @default(cuid()) @map("_id")
   orderId            String        @unique
   userId             String
   method             PaymentMethod
   status             PaymentStatus @default(INITIATED)
-  amount             Decimal       @db.Decimal(10, 2)
+  amount             Float
   transactionId      String?
   stripePaymentId    String?
   mobileReference    String?
@@ -199,14 +199,14 @@ model Payment {
   updatedAt          DateTime      @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user  User  @relation(fields: [userId], references: [id], onDelete: NoAction)
 
   @@index([method])
   @@index([status])
 }
 
 model Delivery {
-  id                String         @id @default(cuid())
+  id                String         @id @default(cuid()) @map("_id")
   orderId           String         @unique
   deliveryManId     String
   status            DeliveryStatus @default(ASSIGNED)
@@ -219,14 +219,14 @@ model Delivery {
   updatedAt         DateTime       @updatedAt
 
   order       Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  deliveryMan User  @relation(fields: [deliveryManId], references: [id], onDelete: Restrict)
+  deliveryMan User  @relation(fields: [deliveryManId], references: [id], onDelete: NoAction)
 
   @@index([deliveryManId])
   @@index([status])
 }
 
 model Notification {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   userId      String
   title       String
   message     String
@@ -241,7 +241,7 @@ model Notification {
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   userId      String?
   action      String
   resource    String
@@ -260,7 +260,7 @@ model AuditLog {
 
 // ─── Real-time delivery GPS breadcrumb trail ───────────────────────────────
 model DeliveryLocation {
-  id            String   @id @default(cuid())
+  id            String   @id @default(cuid()) @map("_id")
   deliveryManId String
   orderId       String?
   latitude      Float

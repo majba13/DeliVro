@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev --name init"
+    "db:push": "prisma db push"
   },
   "dependencies": {
     "@prisma/client": "^6.3.1"

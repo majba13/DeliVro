@@ -18,7 +18,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
     "db:generate": "npm run db:generate -w @delivro/db",
-    "db:migrate": "npm run db:migrate -w @delivro/db"
+    "db:push": "npm run db:push -w @delivro/db"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
