@@ -1,13 +1,7 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
-  "installCommand": "cd ../.. && npm install",
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://api.delivro.com/api/:path*"
-    }
-  ],
+  "installCommand": "cd ../.. && npm install && npx prisma generate --schema=packages/db/prisma/schema.prisma",
   "headers": [
     {
       "source": "/(.*)",
