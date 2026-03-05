@@ -4,11 +4,9 @@
  *   Body: { status: DeliveryStatus, etaMinutes?: number }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { requireAuth, isAuthError } from "@/lib/auth-helpers";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const DELIVERY_STATUSES = ["ASSIGNED", "PICKED_UP", "ON_THE_WAY", "DELIVERED"] as const;
 

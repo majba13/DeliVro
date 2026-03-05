@@ -4,11 +4,9 @@
  * Body: { lat, lng, speed?, heading?, accuracy? }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { requireAuth, isAuthError } from "@/lib/auth-helpers";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const pingSchema = z.object({
   lat: z.number().min(-90).max(90),

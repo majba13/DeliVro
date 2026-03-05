@@ -9,11 +9,9 @@
  *   Body: { deliveryAddress: { street, city, zip, country } }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { requireAuth, isAuthError } from "@/lib/auth-helpers";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);

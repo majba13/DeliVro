@@ -3,11 +3,9 @@
  * DELETE /api/cart/[id] — remove one cart item
  */
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { requireAuth, isAuthError } from "@/lib/auth-helpers";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const patchSchema = z.object({ quantity: z.number().int().min(1) });
 

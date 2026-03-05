@@ -6,11 +6,9 @@
  *   - Mobile (bKash/Nagad/Rocket): returns a pending record for manual verification
  */
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { requireAuth, isAuthError } from "@/lib/auth-helpers";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const VALID_METHODS = ["STRIPE", "BKASH", "NAGAD", "ROCKET", "BANK", "COD"] as const;
 

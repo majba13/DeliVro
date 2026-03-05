@@ -3,12 +3,10 @@
  * Creates a new user account and returns JWTs immediately.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
 import { z } from "zod";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const ACCESS_SECRET = new TextEncoder().encode(
   process.env.JWT_ACCESS_SECRET ?? "dev-access-secret-change-in-production"
@@ -125,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
     console.error("[register]", err);
     return NextResponse.json(
-      { message: "Registration failed. Please try again." },
+      { message: err?.message ?? "Registration failed. Please try again." },
       { status: 500 }
     );
   }
