@@ -18,13 +18,14 @@ const VALID_STATUSES = [
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
+  const { id } = await params;
 
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       items: {
         include: {
@@ -63,12 +64,13 @@ const patchSchema = z.object({
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
+  const { id } = await params;
 
-  const order = await prisma.order.findUnique({ where: { id: params.id } });
+  const order = await prisma.order.findUnique({ where: { id } });
   if (!order) return NextResponse.json({ message: "Order not found" }, { status: 404 });
 
   const adminRoles = ["SUPER_ADMIN", "ADMIN"];
@@ -85,7 +87,7 @@ export async function PATCH(
   }
 
   const updated = await prisma.order.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       status: body.data.status,
       ...(body.data.estimatedMinutes ? { estimatedMinutes: body.data.estimatedMinutes } : {}),
@@ -108,12 +110,13 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
+  const { id } = await params;
 
-  const order = await prisma.order.findUnique({ where: { id: params.id } });
+  const order = await prisma.order.findUnique({ where: { id } });
   if (!order) return NextResponse.json({ message: "Order not found" }, { status: 404 });
 
   // Only customer who placed it can cancel, and only while PENDING
@@ -124,6 +127,6 @@ export async function DELETE(
     return NextResponse.json({ message: "Only PENDING orders can be cancelled" }, { status: 400 });
   }
 
-  await prisma.order.update({ where: { id: params.id }, data: { status: "CANCELLED" } });
+  await prisma.order.update({ where: { id }, data: { status: "CANCELLED" } });
   return new NextResponse(null, { status: 204 });
 }

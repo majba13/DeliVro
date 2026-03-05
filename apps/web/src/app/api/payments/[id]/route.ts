@@ -12,13 +12,14 @@ const prisma = new PrismaClient();
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
+  const { id } = await params;
 
   const payment = await prisma.payment.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { order: { select: { id: true, customerId: true, ownerId: true, status: true, total: true } } },
   });
 
@@ -43,10 +44,11 @@ const patchSchema = z.object({
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
+  const { id } = await params;
 
   const adminRoles = ["SUPER_ADMIN", "ADMIN", "SHOP_OWNER"];
   if (!adminRoles.includes(auth.role)) {
@@ -58,11 +60,11 @@ export async function PATCH(
     return NextResponse.json({ message: "Invalid input" }, { status: 400 });
   }
 
-  const payment = await prisma.payment.findUnique({ where: { id: params.id } });
+  const payment = await prisma.payment.findUnique({ where: { id } });
   if (!payment) return NextResponse.json({ message: "Not found" }, { status: 404 });
 
   const updated = await prisma.payment.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       status: body.data.status,
       verificationLog: body.data.note ? { note: body.data.note, by: auth.sub, at: new Date().toISOString() } : undefined,

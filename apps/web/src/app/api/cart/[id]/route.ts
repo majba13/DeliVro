@@ -13,12 +13,13 @@ const patchSchema = z.object({ quantity: z.number().int().min(1) });
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
+  const { id } = await params;
 
-  const item = await prisma.cartItem.findUnique({ where: { id: params.id } });
+  const item = await prisma.cartItem.findUnique({ where: { id } });
   if (!item || item.userId !== auth.sub) {
     return NextResponse.json({ message: "Not found" }, { status: 404 });
   }
@@ -29,7 +30,7 @@ export async function PATCH(
   }
 
   const updated = await prisma.cartItem.update({
-    where: { id: params.id },
+    where: { id },
     data: { quantity: body.data.quantity, updatedAt: new Date() },
     include: { product: { select: { id: true, name: true, price: true, images: true } } },
   });
@@ -39,16 +40,17 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
+  const { id } = await params;
 
-  const item = await prisma.cartItem.findUnique({ where: { id: params.id } });
+  const item = await prisma.cartItem.findUnique({ where: { id } });
   if (!item || item.userId !== auth.sub) {
     return NextResponse.json({ message: "Not found" }, { status: 404 });
   }
 
-  await prisma.cartItem.delete({ where: { id: params.id } });
+  await prisma.cartItem.delete({ where: { id } });
   return new NextResponse(null, { status: 204 });
 }

@@ -14,13 +14,14 @@ const DELIVERY_STATUSES = ["ASSIGNED", "PICKED_UP", "ON_THE_WAY", "DELIVERED"] a
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
+  const { orderId } = await params;
 
   const delivery = await prisma.delivery.findUnique({
-    where: { orderId: params.orderId },
+    where: { orderId },
     include: {
       deliveryMan: { select: { id: true, name: true, phone: true } },
       order: { select: { id: true, customerId: true, ownerId: true, status: true, deliveryAddress: true } },
@@ -41,7 +42,7 @@ export async function GET(
 
   // Last 50 GPS pings for live map
   const pings = await prisma.deliveryLocation.findMany({
-    where: { orderId: params.orderId },
+    where: { orderId },
     orderBy: { recordedAt: "desc" },
     take: 50,
     select: { latitude: true, longitude: true, speed: true, heading: true, recordedAt: true },
@@ -59,13 +60,14 @@ const patchSchema = z.object({
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
+  const { orderId } = await params;
 
   const delivery = await prisma.delivery.findUnique({
-    where: { orderId: params.orderId },
+    where: { orderId },
     include: { order: { select: { customerId: true } } },
   });
   if (!delivery) return NextResponse.json({ message: "Delivery not found" }, { status: 404 });
@@ -83,7 +85,7 @@ export async function PATCH(
 
   const now = new Date();
   const updated = await prisma.delivery.update({
-    where: { orderId: params.orderId },
+    where: { orderId },
     data: {
       status: body.data.status,
       ...(body.data.etaMinutes ? { etaMinutes: body.data.etaMinutes } : {}),
@@ -97,9 +99,9 @@ export async function PATCH(
 
   // Sync order status when delivered
   if (body.data.status === "DELIVERED") {
-    await prisma.order.update({ where: { id: params.orderId }, data: { status: "DELIVERED" } });
+    await prisma.order.update({ where: { id: orderId }, data: { status: "DELIVERED" } });
   } else if (body.data.status === "OUT_FOR_DELIVERY" || body.data.status === "PICKED_UP") {
-    await prisma.order.update({ where: { id: params.orderId }, data: { status: "OUT_FOR_DELIVERY" } });
+    await prisma.order.update({ where: { id: orderId }, data: { status: "OUT_FOR_DELIVERY" } });
   }
 
   // Notify customer
@@ -111,7 +113,7 @@ export async function PATCH(
         body.data.etaMinutes ? `. ETA: ${body.data.etaMinutes} mins` : ""
       }`,
       channel: "in_app",
-      payload: { orderId: params.orderId, status: body.data.status },
+      payload: { orderId, status: body.data.status },
     },
   });
 

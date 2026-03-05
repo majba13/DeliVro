@@ -20,9 +20,10 @@ const pingSchema = z.object({
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   const auth = await requireAuth(req);
+  const { orderId } = await params;
   if (isAuthError(auth)) return auth;
 
   // Only delivery men (and admins) can ping GPS
@@ -39,7 +40,7 @@ export async function POST(
   const { lat, lng, speed, heading, accuracy } = body.data;
 
   // Verify this delivery is assigned to this user
-  const delivery = await prisma.delivery.findUnique({ where: { orderId: params.orderId } });
+  const delivery = await prisma.delivery.findUnique({ where: { orderId } });
   if (!delivery) return NextResponse.json({ message: "Delivery not found" }, { status: 404 });
 
   const adminRoles = ["SUPER_ADMIN", "ADMIN"];
@@ -51,7 +52,7 @@ export async function POST(
   const ping = await prisma.deliveryLocation.create({
     data: {
       deliveryManId: auth.sub,
-      orderId: params.orderId,
+      orderId,
       latitude: lat,
       longitude: lng,
       speed: speed ?? null,
@@ -62,7 +63,7 @@ export async function POST(
 
   // Update current position on Delivery record
   await prisma.delivery.update({
-    where: { orderId: params.orderId },
+    where: { orderId },
     data: { currentLat: lat, currentLng: lng, lastTrackedAt: new Date(), updatedAt: new Date() },
   });
 
