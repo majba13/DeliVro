@@ -4,8 +4,13 @@
  * 401 → refresh → retry once before redirecting to /login.
  */
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+/**
+ * When NEXT_PUBLIC_API_URL is set (e.g. pointing to the deployed API gateway),
+ * all requests go there. Otherwise, requests are relative — allowing the
+ * built-in Next.js API routes (/api/auth/*, etc.) to handle them directly.
+ * This makes the app work on Vercel and local dev without a separate backend.
+ */
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 /* ------------------------------------------------------------------ */
 /* Token helpers (localStorage — client-side only)                      */
@@ -52,7 +57,7 @@ async function request<T>(
 
   /* 401 → try token refresh once */
   if (res.status === 401 && !retried && Tokens.refresh) {
-    const refreshRes = await fetch(`${BASE_URL}/api/auth/refresh`, {
+    const refreshRes = await fetch(`${BASE_URL}/api/auth/token/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: Tokens.refresh }),
