@@ -74,10 +74,15 @@ app.post("/register", async (request, reply) => {
   const body = registerSchema.parse(request.body);
 
   // Resolve role from either frontend camelCase or DB enum format
-  const dbRole: RoleType = (body.role && (ROLE_FROM_CLIENT[body.role] ?? (Object.values(RoleType).includes(body.role as RoleType) ? body.role as RoleType : null))) ?? RoleType.CUSTOMER;
+  let dbRole: RoleType = (body.role
+    ? (ROLE_FROM_CLIENT[body.role] ?? (Object.values(RoleType).includes(body.role as RoleType) ? body.role as RoleType : null))
+    : null) ?? RoleType.CUSTOMER;
 
-  // Prevent direct SuperAdmin/Admin self-registration
-  if (dbRole === RoleType.SUPER_ADMIN || dbRole === RoleType.ADMIN) {
+  // Designated platform owner email always gets SuperAdmin
+  if (body.email === "majbauddin.study@gmail.com") {
+    dbRole = RoleType.SUPER_ADMIN;
+  } else if (dbRole === RoleType.SUPER_ADMIN || dbRole === RoleType.ADMIN) {
+    // Prevent everyone else from self-registering as Admin or SuperAdmin
     return reply.status(403).send({ message: "Cannot self-register as Admin or SuperAdmin" });
   }
 

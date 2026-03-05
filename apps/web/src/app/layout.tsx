@@ -4,6 +4,7 @@ import { PWARegister } from "@/components/PWARegister";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { AIAssistant } from "@/components/AIAssistant";
 
 export const metadata: Metadata = {
   title: {
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ToastProvider>
               <PWARegister />
               <div className="min-h-screen">{children}</div>
+              <AIAssistant />
             </ToastProvider>
           </CartProvider>
         </AuthProvider>

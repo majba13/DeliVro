@@ -79,6 +79,7 @@ model User {
   notifications    Notification[]
   auditLogs        AuditLog[]
   cartItems        CartItem[]
+  locationPings    DeliveryLocation[] @relation("DeliveryManLocations")
 }
 
 model AdminPermission {
@@ -162,6 +163,7 @@ model Order {
   items     OrderItem[]
   payment   Payment?
   delivery  Delivery?
+  locationPings DeliveryLocation[]
 
   @@index([customerId])
   @@index([ownerId])
@@ -254,4 +256,24 @@ model AuditLog {
   @@index([userId])
   @@index([action])
   @@index([createdAt])
+}
+
+// ─── Real-time delivery GPS breadcrumb trail ───────────────────────────────
+model DeliveryLocation {
+  id            String   @id @default(cuid())
+  deliveryManId String
+  orderId       String?
+  latitude      Float
+  longitude     Float
+  speed         Float?   // km/h — optional
+  heading       Float?   // degrees 0-359 — optional
+  accuracy      Float?   // metres — optional
+  recordedAt    DateTime @default(now())
+
+  deliveryMan User     @relation("DeliveryManLocations", fields: [deliveryManId], references: [id], onDelete: Cascade)
+  order       Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([deliveryManId])
+  @@index([orderId])
+  @@index([recordedAt])
 }

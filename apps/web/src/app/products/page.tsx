@@ -1,6 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { useCart } from "@/context/CartContext";
@@ -114,12 +116,20 @@ function ProductCard({ product }: { product: Product }) {
 /* ------------------------------------------------------------------ */
 /* Page                                                                 */
 /* ------------------------------------------------------------------ */
-export default function ProductsPage() {
+function ProductsContent() {
+  const params = useSearchParams();
+  const urlCategory = params.get("category") ?? "All";
+
   const [products, setProducts] = useState<Product[]>(DEMO_PRODUCTS);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
+  const [category, setCategory] = useState(urlCategory);
   const [sort, setSort] = useState("featured");
+
+  /* Sync category when URL param changes (e.g. navigating from CategorySlider) */
+  useEffect(() => {
+    setCategory(urlCategory);
+  }, [urlCategory]);
 
   /* Fetch real products from API */
   useEffect(() => {
@@ -229,5 +239,13 @@ export default function ProductsPage() {
         )}
       </section>
     </main>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center text-slate-400">Loading products…</div>}>
+      <ProductsContent />
+    </Suspense>
   );
 }
