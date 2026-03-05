@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     // Dynamic import — avoids bundling Stripe in non-payment routes
     const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-01-27.acacia" });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-02-24.acacia" });
 
     const intent = await stripe.paymentIntents.create({
       amount: Math.round(order.total * 100), // paisa

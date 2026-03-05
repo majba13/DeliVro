@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   const Stripe = (await import("stripe")).default;
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-01-27.acacia" });
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-02-24.acacia" });
 
   const rawBody = await req.text();
   const sig = req.headers.get("stripe-signature") ?? "";
