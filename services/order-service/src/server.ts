@@ -45,8 +45,14 @@ app.post("/", { preHandler: (app as any).authenticate }, async (request: any, re
   if (user.role !== RoleType.CUSTOMER) return reply.status(403).send({ message: "Only customers can order" });
 
   const body = z.object({
-    ownerId: z.string(),
-    items: z.array(z.object({ productId: z.string(), quantity: z.number().int().positive() })).min(1)
+    ownerId: z.string().optional(),
+    items: z.array(z.object({ productId: z.string(), quantity: z.number().int().positive(), price: z.number().optional() })).min(1),
+    deliveryAddress: z.object({
+      line1: z.string().min(1),
+      city: z.string().min(1),
+      zip: z.string().optional()
+    }).optional(),
+    paymentMethod: z.string().optional()
   }).parse(request.body);
 
   const products = await prisma.product.findMany({ where: { id: { in: body.items.map((i) => i.productId) } }, include: { inventory: true } });
@@ -54,11 +60,16 @@ app.post("/", { preHandler: (app as any).authenticate }, async (request: any, re
   let subtotal = 0;
   for (const item of body.items) {
     const product = products.find((p) => p.id === item.productId);
-    if (!product || !product.inventory || product.inventory.stock < item.quantity) {
-      return reply.status(400).send({ message: `Insufficient stock for product ${item.productId}` });
+    if (!product) return reply.status(404).send({ message: `Product ${item.productId} not found` });
+    if (!product.inventory || product.inventory.stock < item.quantity) {
+      return reply.status(400).send({ message: `Insufficient stock for ${product.name}` });
     }
     subtotal += Number(product.price) * item.quantity;
   }
+
+  // Derive ownerId from the first product if not provided
+  const ownerId = body.ownerId ?? products[0]?.ownerId;
+  if (!ownerId) return reply.status(400).send({ message: "Cannot determine shop owner" });
 
   const deliveryFee = 40;
   const total = subtotal + deliveryFee;
@@ -67,10 +78,11 @@ app.post("/", { preHandler: (app as any).authenticate }, async (request: any, re
     const created = await tx.order.create({
       data: {
         customerId: user.sub,
-        ownerId: body.ownerId,
+        ownerId,
         subtotal,
         deliveryFee,
         total,
+        deliveryAddress: body.deliveryAddress ?? {},
         estimatedMinutes: 45,
         items: {
           create: body.items.map((i) => {

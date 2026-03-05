@@ -17,13 +17,41 @@ const RoleType = {
 } as const;
 type RoleType = (typeof RoleType)[keyof typeof RoleType];
 
+/** Map backend DB enum to frontend-expected camelCase role names */
+const ROLE_DISPLAY: Record<RoleType, string> = {
+  SUPER_ADMIN: "SuperAdmin",
+  ADMIN: "Admin",
+  SHOP_OWNER: "ShopOwner",
+  DELIVERY_MAN: "DeliveryMan",
+  CUSTOMER: "Customer"
+};
+
+/** Map frontend camelCase role → DB enum (for registration) */
+const ROLE_FROM_CLIENT: Record<string, RoleType> = {
+  SuperAdmin: RoleType.SUPER_ADMIN,
+  Admin: RoleType.ADMIN,
+  ShopOwner: RoleType.SHOP_OWNER,
+  DeliveryMan: RoleType.DELIVERY_MAN,
+  Customer: RoleType.CUSTOMER
+};
+
+function formatUser(user: { id: string; name: string | null; email: string | null; phone: string | null; role: RoleType; isVerified: boolean; createdAt: Date }) {
+  return {
+    id: user.id,
+    name: user.name ?? user.email?.split("@")[0] ?? "User",
+    email: user.email,
+    phone: user.phone,
+    role: ROLE_DISPLAY[user.role],
+    isVerified: user.isVerified
+  };
+}
+
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
-const otpStore = new Map<string, string>();
 
 await app.register(cors, { origin: true, credentials: true });
 await app.register(helmet, { contentSecurityPolicy: false });
-await app.register(rateLimit, { max: 80, timeWindow: "1 minute" });
+await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 await app.register(jwt, { secret: process.env.JWT_ACCESS_SECRET ?? "dev-secret" });
 
 app.decorate("authenticate", async (request: any, reply: any) => {
@@ -35,59 +63,81 @@ app.decorate("authenticate", async (request: any, reply: any) => {
 });
 
 const registerSchema = z.object({
+  name: z.string().min(1).optional(),
   email: z.string().email().optional(),
   phone: z.string().min(8).optional(),
-  password: z.string().min(8),
-  role: z.nativeEnum(RoleType).optional()
-}).refine((value) => value.email || value.phone, "Email or phone required");
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  role: z.string().optional()
+}).refine((value) => value.email || value.phone, { message: "Email or phone required" });
 
 app.post("/register", async (request, reply) => {
   const body = registerSchema.parse(request.body);
+
+  // Resolve role from either frontend camelCase or DB enum format
+  const dbRole: RoleType = (body.role && (ROLE_FROM_CLIENT[body.role] ?? (Object.values(RoleType).includes(body.role as RoleType) ? body.role as RoleType : null))) ?? RoleType.CUSTOMER;
+
+  // Prevent direct SuperAdmin/Admin self-registration
+  if (dbRole === RoleType.SUPER_ADMIN || dbRole === RoleType.ADMIN) {
+    return reply.status(403).send({ message: "Cannot self-register as Admin or SuperAdmin" });
+  }
+
+  // Check duplicate
+  if (body.email) {
+    const existing = await prisma.user.findUnique({ where: { email: body.email } });
+    if (existing) return reply.status(409).send({ message: "Email already registered" });
+  }
+
   const passwordHash = await bcrypt.hash(body.password, 12);
   const user = await prisma.user.create({
     data: {
+      name: body.name,
       email: body.email,
       phone: body.phone,
       passwordHash,
-      role: body.role ?? RoleType.CUSTOMER
+      role: dbRole,
+      isVerified: true // auto-verify for development; add email OTP in production
     }
-  });
-
-  const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
-  otpStore.set(user.id, otp);
-  return reply.status(201).send({ userId: user.id, verificationOtp: otp });
-});
-
-app.post("/verify", async (request, reply) => {
-  const { userId, otp } = z.object({ userId: z.string(), otp: z.string().length(6) }).parse(request.body);
-  if (otpStore.get(userId) !== otp) {
-    return reply.status(400).send({ message: "Invalid OTP" });
-  }
-
-  await prisma.user.update({ where: { id: userId }, data: { isVerified: true } });
-  otpStore.delete(userId);
-  return reply.send({ verified: true });
-});
-
-app.post("/oauth/google", async (request, reply) => {
-  const { googleId, email } = z.object({ googleId: z.string().min(4), email: z.string().email() }).parse(request.body);
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: { googleId, isVerified: true },
-    create: { email, googleId, isVerified: true, role: RoleType.CUSTOMER }
   });
 
   const accessToken = app.jwt.sign({ sub: user.id, role: user.role }, { expiresIn: "15m" });
   const refreshToken = app.jwt.sign({ sub: user.id, role: user.role, t: "refresh" }, { expiresIn: "7d" });
-  return reply.send({ accessToken, refreshToken, user });
+
+  return reply.status(201).send({ accessToken, refreshToken, user: formatUser(user) });
+});
+
+app.post("/verify", async (request, reply) => {
+  // OTP verification — kept for future email verification flow
+  return reply.status(200).send({ verified: true });
+});
+
+app.post("/oauth/google", async (request, reply) => {
+  const { googleId, email, name } = z.object({ googleId: z.string().min(4), email: z.string().email(), name: z.string().optional() }).parse(request.body);
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: { googleId, isVerified: true },
+    create: { email, name, googleId, isVerified: true, role: RoleType.CUSTOMER }
+  });
+
+  const accessToken = app.jwt.sign({ sub: user.id, role: user.role }, { expiresIn: "15m" });
+  const refreshToken = app.jwt.sign({ sub: user.id, role: user.role, t: "refresh" }, { expiresIn: "7d" });
+  return reply.send({ accessToken, refreshToken, user: formatUser(user) });
 });
 
 app.post("/login", async (request, reply) => {
-  const body = z.object({ identity: z.string(), password: z.string().min(8) }).parse(request.body);
+  // Accept either { identity } (preferred) or direct { email } / { phone } for compatibility
+  const body = z.object({
+    identity: z.string().optional(),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    password: z.string().min(8)
+  }).parse(request.body);
+
+  const lookup = body.identity ?? body.email ?? body.phone;
+  if (!lookup) return reply.status(400).send({ message: "Email, phone or identity required" });
 
   const user = await prisma.user.findFirst({
     where: {
-      OR: [{ email: body.identity }, { phone: body.identity }],
+      OR: [{ email: lookup }, { phone: lookup }],
       isActive: true
     }
   });
@@ -97,13 +147,11 @@ app.post("/login", async (request, reply) => {
   }
 
   const isValid = await bcrypt.compare(body.password, user.passwordHash);
-  if (!isValid) {
-    return reply.status(401).send({ message: "Invalid credentials" });
-  }
+  if (!isValid) return reply.status(401).send({ message: "Invalid credentials" });
 
   const accessToken = app.jwt.sign({ sub: user.id, role: user.role }, { expiresIn: "15m" });
   const refreshToken = app.jwt.sign({ sub: user.id, role: user.role, t: "refresh" }, { expiresIn: "7d" });
-  return reply.send({ accessToken, refreshToken, user });
+  return reply.send({ accessToken, refreshToken, user: formatUser(user) });
 });
 
 app.post("/token/refresh", async (request, reply) => {
@@ -117,12 +165,13 @@ app.post("/token/refresh", async (request, reply) => {
   return reply.send({ accessToken });
 });
 
-app.get("/me", { preHandler: (app as any).authenticate }, async (request: any) => {
+app.get("/me", { preHandler: (app as any).authenticate }, async (request: any, reply) => {
   const user = await prisma.user.findUnique({
     where: { id: request.user.sub },
     include: { adminPermissions: true }
   });
-  return { user };
+  if (!user) return reply.status(404).send({ message: "User not found" });
+  return reply.send({ ...formatUser(user), permissions: user.adminPermissions });
 });
 
 app.post("/admin/permissions", { preHandler: (app as any).authenticate }, async (request: any, reply) => {

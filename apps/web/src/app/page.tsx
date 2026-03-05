@@ -1,18 +1,22 @@
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { CategorySlider } from "@/components/CategorySlider";
-import { ProductCarousel } from "@/components/ProductCarousel";
+import { ProductCarousel, type CarouselProduct } from "@/components/ProductCarousel";
 import { Footer } from "@/components/Footer";
 
-const demoProducts = [
-  { id: "1", name: "Fresh Salmon", category: "Food", price: 22.5 },
-  { id: "2", name: "Organic Rice", category: "Groceries", price: 11.2 },
-  { id: "3", name: "Notebook Set", category: "Stationary", price: 7.8 },
-  { id: "4", name: "Vitamin Pack", category: "Medicine", price: 18.9 },
-  { id: "5", name: "Denim Jacket", category: "Wear", price: 34.7 },
-  { id: "6", name: "Mango Juice x6", category: "Food", price: 9.6 },
-  { id: "7", name: "Wireless Earbuds", category: "Electronics", price: 49.99 },
-  { id: "8", name: "Yoga Mat Pro", category: "Sports", price: 27.0 },
+const demoProducts: CarouselProduct[] = [
+  { id: "1", name: "Fresh Atlantic Salmon", description: "Wild-caught, premium quality", category: "Food", price: 22.5, rating: 4.8 },
+  { id: "2", name: "Mango Juice 1L x6", description: "100% natural, no added sugar", category: "Food", price: 9.6, rating: 4.3 },
+  { id: "3", name: "Organic Basmati Rice 5kg", description: "Aged aromatic basmati", category: "Groceries", price: 11.2, rating: 4.6 },
+  { id: "4", name: "Green Tea 100 bags", description: "Premium Japanese sencha", category: "Groceries", price: 8.4, rating: 4.7 },
+  { id: "5", name: "Paracetamol 500mg x20", description: "Fast-acting pain relief", category: "Medicine", price: 3.5, rating: 4.8 },
+  { id: "6", name: "Multi-Vitamin Pack", description: "30-day supply, all essentials", category: "Medicine", price: 18.9, rating: 4.7 },
+  { id: "7", name: "Premium Notebook Set", description: "A5 hardcover, 200 pages", category: "Stationary", price: 7.8, rating: 4.4 },
+  { id: "8", name: "Ballpoint Pen Set x10", description: "Smooth 0.7mm, blue/black", category: "Stationary", price: 4.2, rating: 4.2 },
+  { id: "9", name: "Classic Denim Jacket", description: "Regular fit, stonewash blue", category: "Wear", price: 34.7, rating: 4.5 },
+  { id: "10", name: "Running Sneakers", description: "Lightweight mesh, size 7-12", category: "Wear", price: 62.0, rating: 4.5 },
+  { id: "11", name: "Wireless Earbuds", description: "BT 5.3, ANC, 30hr battery", category: "Electronics", price: 49.99, rating: 4.9 },
+  { id: "12", name: "USB-C Hub 7-in-1", description: "4K HDMI, 100W PD, SD card", category: "Electronics", price: 29.99, rating: 4.6 },
 ];
 
 const FEATURES = [

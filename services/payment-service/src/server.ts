@@ -255,6 +255,67 @@ app.get("/fraud-score/:orderId", { preHandler: (app as any).authenticate }, asyn
 
 app.get("/health", async () => ({ status: "ok", service: "payment-service" }));
 
+/**
+ * Unified payment initiation endpoint.
+ * Called by the checkout page with { orderId, method, amount, transactionId?, mobileReference? }
+ * Routes internally to stripe intent, manual MFS, or COD depending on method.
+ */
+app.post("/", { preHandler: (app as any).authenticate }, async (request: any, reply) => {
+  const user = request.user as { sub: string };
+  const body = z.object({
+    orderId: z.string(),
+    method: z.enum(["STRIPE", "BKASH", "NAGAD", "ROCKET", "BANK", "COD"]),
+    amount: z.number().positive().optional(),
+    transactionId: z.string().optional(),
+    mobileReference: z.string().optional(),
+    currency: z.string().default("USD")
+  }).parse(request.body);
+
+  const order = await prisma.order.findUnique({ where: { id: body.orderId } });
+  if (!order) return reply.status(404).send({ message: "Order not found" });
+
+  const payAmount = body.amount ?? Number(order.total);
+
+  if (body.method === PaymentMethod.STRIPE) {
+    const intent = await stripe.paymentIntents.create({
+      amount: Math.round(payAmount * 100),
+      currency: body.currency,
+      metadata: { orderId: order.id, userId: user.sub }
+    });
+
+    const payment = await prisma.payment.upsert({
+      where: { orderId: order.id },
+      update: { method: PaymentMethod.STRIPE, stripePaymentId: intent.id, status: PaymentStatus.INITIATED, amount: order.total, userId: user.sub },
+      create: { orderId: order.id, userId: user.sub, method: PaymentMethod.STRIPE, stripePaymentId: intent.id, amount: order.total }
+    });
+
+    return reply.status(201).send({ paymentId: payment.id, clientSecret: intent.client_secret, method: "STRIPE" });
+  }
+
+  if (body.method === PaymentMethod.COD) {
+    const payment = await prisma.payment.upsert({
+      where: { orderId: order.id },
+      update: { method: PaymentMethod.COD, status: PaymentStatus.INITIATED, amount: order.total, userId: user.sub },
+      create: { orderId: order.id, userId: user.sub, method: PaymentMethod.COD, status: PaymentStatus.INITIATED, amount: order.total }
+    });
+    return reply.status(201).send({ paymentId: payment.id, method: "COD", status: "INITIATED" });
+  }
+
+  // Manual MFS / Bank
+  const txId = body.transactionId;
+  if (!txId || txId.length < 6) {
+    return reply.status(400).send({ message: "Transaction ID (min 6 chars) required for manual payments" });
+  }
+
+  const payment = await prisma.payment.upsert({
+    where: { orderId: order.id },
+    update: { method: body.method as PaymentMethod, transactionId: txId, mobileReference: body.mobileReference, status: PaymentStatus.PENDING_VERIFICATION, amount: order.total, userId: user.sub },
+    create: { orderId: order.id, userId: user.sub, method: body.method as PaymentMethod, transactionId: txId, mobileReference: body.mobileReference, status: PaymentStatus.PENDING_VERIFICATION, amount: order.total }
+  });
+
+  return reply.status(201).send({ paymentId: payment.id, method: body.method, status: "PENDING_VERIFICATION", message: "Your payment is being verified by admin." });
+});
+
 const port = Number(process.env.PAYMENT_PORT ?? 4004);
 await app.listen({ port, host: "0.0.0.0" });
 

@@ -65,7 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     api
       .get<AuthUser>("/api/auth/me")
-      .then((u) => setUser(u))
+      .then((u) => {
+        // Backend may return user directly or wrapped in { user }
+        const user = (u as any).id ? u : (u as any).user as AuthUser;
+        setUser(user);
+      })
       .catch(() => Tokens.clear())
       .finally(() => setLoading(false));
   }, []);
@@ -75,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken: string;
       refreshToken: string;
       user: AuthUser;
-    }>("/api/auth/login", { email, password }, { noAuth: true } as never);
+    }>("/api/auth/login", { identity: email, password }, { noAuth: true } as never);
     Tokens.set(data.accessToken, data.refreshToken);
     setUser(data.user);
   }, []);

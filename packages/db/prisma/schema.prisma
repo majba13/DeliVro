@@ -21,6 +21,7 @@ enum ProductCategory {
   STATIONARY
   MEDICINE
   WEAR
+  ELECTRONICS
 }
 
 enum OrderStatus {
@@ -58,6 +59,7 @@ enum DeliveryStatus {
 
 model User {
   id               String      @id @default(cuid())
+  name             String?
   email            String?     @unique
   phone            String?     @unique
   passwordHash     String?
@@ -76,6 +78,7 @@ model User {
   payments         Payment[]
   notifications    Notification[]
   auditLogs        AuditLog[]
+  cartItems        CartItem[]
 }
 
 model AdminPermission {
@@ -108,6 +111,7 @@ model Product {
   owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   inventory Inventory?
   items     OrderItem[]
+  cartItems CartItem[]
 
   @@index([ownerId])
   @@index([category])
@@ -123,6 +127,22 @@ model Inventory {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  quantity  Int      @default(1)
+  price     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
 model Order {
   id               String      @id @default(cuid())
   customerId       String
@@ -131,6 +151,7 @@ model Order {
   subtotal         Decimal     @db.Decimal(10, 2)
   deliveryFee      Decimal     @db.Decimal(10, 2)
   total            Decimal     @db.Decimal(10, 2)
+  deliveryAddress  Json?
   estimatedMinutes Int?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt

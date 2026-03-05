@@ -11,7 +11,8 @@ const ProductCategory = {
   GROCERIES: "GROCERIES",
   STATIONARY: "STATIONARY",
   MEDICINE: "MEDICINE",
-  WEAR: "WEAR"
+  WEAR: "WEAR",
+  ELECTRONICS: "ELECTRONICS"
 } as const;
 type ProductCategory = (typeof ProductCategory)[keyof typeof ProductCategory];
 
