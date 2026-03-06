@@ -18,6 +18,11 @@ import { api, Tokens } from "@/lib/api";
 /* Types                                                                */
 /* ------------------------------------------------------------------ */
 export type UserRole =
+  | "SUPER_ADMIN"
+  | "ADMIN"
+  | "SHOP_OWNER"
+  | "DELIVERY_MAN"
+  | "CUSTOMER"
   | "SuperAdmin"
   | "Admin"
   | "ShopOwner"
@@ -35,6 +40,7 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
@@ -100,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, isLoading: loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -195,6 +195,11 @@ function CustomerPanel({ name }: { name: string }) {
 /* Main dashboard page                                                  */
 /* ------------------------------------------------------------------ */
 const ROLE_LABELS: Record<UserRole, string> = {
+  SUPER_ADMIN: "Super Administrator",
+  ADMIN: "Platform Admin",
+  SHOP_OWNER: "Shop Owner",
+  DELIVERY_MAN: "Delivery Agent",
+  CUSTOMER: "Customer",
   SuperAdmin: "Super Administrator",
   Admin: "Platform Admin",
   ShopOwner: "Shop Owner",

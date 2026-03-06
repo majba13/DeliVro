@@ -11,6 +11,7 @@ const ACCESS_SECRET = new TextEncoder().encode(
 
 export interface TokenPayload {
   sub: string;          // userId
+  userId: string;       // alias for sub
   role: string;
   email?: string;
 }
@@ -27,6 +28,7 @@ export async function requireAuth(
     const { payload } = await jwtVerify(authHeader.slice(7), ACCESS_SECRET);
     return {
       sub: payload.sub as string,
+      userId: payload.sub as string, // alias for easier access
       role: payload["role"] as string,
       email: payload["email"] as string | undefined,
     };

@@ -87,21 +87,21 @@ async function request<T>(
 /* Public convenience methods                                           */
 /* ------------------------------------------------------------------ */
 export const api = {
-  get: <T>(path: string, opts?: RequestInit) =>
+  get: <T = any>(path: string, opts?: RequestInit) =>
     request<T>(path, { ...opts, method: "GET" }),
-  post: <T>(path: string, body: unknown, opts?: RequestInit) =>
+  post: <T = any>(path: string, body?: unknown, opts?: RequestInit) =>
     request<T>(path, {
       ...opts,
       method: "POST",
-      body: JSON.stringify(body),
+      body: body ? JSON.stringify(body) : undefined,
     }),
-  patch: <T>(path: string, body: unknown, opts?: RequestInit) =>
+  patch: <T = any>(path: string, body?: unknown, opts?: RequestInit) =>
     request<T>(path, {
       ...opts,
       method: "PATCH",
-      body: JSON.stringify(body),
+      body: body ? JSON.stringify(body) : undefined,
     }),
-  delete: <T>(path: string, opts?: RequestInit) =>
+  delete: <T = any>(path: string, opts?: RequestInit) =>
     request<T>(path, { ...opts, method: "DELETE" }),
 };
 

@@ -98,6 +98,9 @@ export function Navbar() {
                       <div className="px-3 py-2 text-xs text-slate-500 border-b border-slate-100">{user.email}</div>
                       <Link href="/orders" onClick={() => setProfileOpen(false)} className="block px-3 py-2 text-sm hover:bg-slate-50">My Orders</Link>
                       <Link href="/dashboard" onClick={() => setProfileOpen(false)} className="block px-3 py-2 text-sm hover:bg-slate-50">Dashboard</Link>
+                      {(user.role === "SUPER_ADMIN" || user.role === "ADMIN") && (
+                        <Link href="/admin" onClick={() => setProfileOpen(false)} className="block px-3 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50">Admin Panel</Link>
+                      )}
                       <button onClick={handleLogout} className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Sign out</button>
                     </motion.div>
                   )}
