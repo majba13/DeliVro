@@ -9,17 +9,14 @@ import { api } from "@/lib/api";
 import dynamic from "next/dynamic";
 
 // Dynamically import map component to avoid SSR issues
-const DeliveryMap = dynamic<{ orderId: string }>(
-  () => import("@/components/DeliveryMap").then((mod) => mod.default),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-96 items-center justify-center bg-slate-100">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
-      </div>
-    ),
-  }
-);
+const DeliveryMap = dynamic(() => import("@/components/DeliveryMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-96 items-center justify-center bg-slate-100">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
+    </div>
+  ),
+});
 
 interface Delivery {
   id: string;
