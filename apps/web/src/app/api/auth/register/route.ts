@@ -63,14 +63,14 @@ export async function POST(req: NextRequest) {
 
     // Duplicate check
     if (body.email) {
-      const existing = await prisma.user.findUnique({
-        where: { email: body.email },
-      });
+      const existing = await prisma.user.findUnique({ where: { email: body.email } });
       if (existing)
-        return NextResponse.json(
-          { message: "Email already registered" },
-          { status: 409 }
-        );
+        return NextResponse.json({ message: "Email already registered" }, { status: 409 });
+    }
+    if (body.phone) {
+      const existing = await prisma.user.findUnique({ where: { phone: body.phone } });
+      if (existing)
+        return NextResponse.json({ message: "Phone number already registered" }, { status: 409 });
     }
 
     const passwordHash = await bcrypt.hash(body.password, 12);
