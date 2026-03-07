@@ -290,6 +290,7 @@ model AdminTransaction {
   senderNumber    String?  // Customer's mobile number (if available)
   receivedAt      DateTime // When admin received the payment
   rawMessage      String?  // Original SMS/notification text
+  notes           String?  // Internal notes / mismatch info
   isMatched       Boolean  @default(false) // Whether matched to a payment
   matchedPaymentId String? @unique // Payment record it matched to
   createdAt       DateTime @default(now())
