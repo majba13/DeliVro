@@ -199,8 +199,9 @@ model Payment {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: NoAction)
+  order                Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user                 User               @relation(fields: [userId], references: [id], onDelete: NoAction)
+  adminTransactionMatch AdminTransaction? @relation("AdminTransactionMatch")
 
   @@index([method])
   @@index([status])
@@ -290,10 +291,11 @@ model AdminTransaction {
   receivedAt      DateTime // When admin received the payment
   rawMessage      String?  // Original SMS/notification text
   isMatched       Boolean  @default(false) // Whether matched to a payment
-  matchedPaymentId String? // Payment record it matched to
+  matchedPaymentId String? @unique // Payment record it matched to
   createdAt       DateTime @default(now())
 
-  admin User @relation("AdminTransactions", fields: [adminId], references: [id], onDelete: Cascade)
+  admin          User     @relation("AdminTransactions", fields: [adminId], references: [id], onDelete: Cascade)
+  matchedPayment Payment? @relation("AdminTransactionMatch", fields: [matchedPaymentId], references: [id], onDelete: SetNull)
 
   @@unique([method, transactionId])
   @@index([method])
