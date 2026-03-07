@@ -4,8 +4,9 @@ import { requireAuth } from "@/lib/auth-helpers";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const authResult = await requireAuth(req);
     if (authResult instanceof NextResponse) return authResult;
@@ -22,7 +23,7 @@ export async function POST(
 
     // Fetch payment with order details
     const payment = await prisma.payment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         order: {
           include: {
@@ -57,7 +58,7 @@ export async function POST(
 
     // Update payment with transaction details
     const updatedPayment = await prisma.payment.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         transactionId: transactionId.trim(),
         mobileReference: screenshotUrl || undefined,
@@ -94,7 +95,7 @@ export async function POST(
         await prisma.$transaction([
           // Update payment status to VERIFIED
           prisma.payment.update({
-            where: { id: params.id },
+            where: { id },
             data: {
               status: "VERIFIED",
               verificationLog: {
@@ -119,7 +120,7 @@ export async function POST(
             where: { id: matchingAdminTxn.id },
             data: {
               isMatched: true,
-              matchedPaymentId: params.id,
+              matchedPaymentId: id,
             },
           }),
           // Create notification for customer
@@ -132,7 +133,7 @@ export async function POST(
               payload: {
                 type: "PAYMENT",
                 orderId: payment.orderId,
-                paymentId: params.id,
+                paymentId: id,
               },
             },
           }),
@@ -142,7 +143,7 @@ export async function POST(
               userId: user.userId,
               action: "PAYMENT_AUTO_VERIFIED",
               resource: "Payment",
-              resourceId: params.id,
+              resourceId: id,
               metadata: {
                 orderId: payment.orderId,
                 amount: payment.amount,
@@ -159,7 +160,7 @@ export async function POST(
       } else {
         // Amount mismatch - log but don't auto-verify
         await prisma.payment.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             verificationLog: {
               push: {
