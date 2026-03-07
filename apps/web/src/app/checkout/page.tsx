@@ -50,7 +50,7 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
-      /* 1. Create order from server-side cart (cart items are already synced) */
+      /* 1. Create order — pass local items as fallback in case DB cart sync failed */
       const orderRes = await api.post<{ order: { id: string; total: number } }>("/api/orders", {
         deliveryAddress: {
           street: address.street,
@@ -58,6 +58,7 @@ export default function CheckoutPage() {
           zip: address.zip || undefined,
           country: "Bangladesh",
         },
+        items: items.map((i) => ({ productId: i.id, quantity: i.quantity, price: i.price })),
       });
       const orderId = orderRes.order.id;
 

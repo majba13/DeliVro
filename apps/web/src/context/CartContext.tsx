@@ -133,7 +133,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
           /* Fetch the authoritative cart from the database */
           const data = await api.get<{ items: DbCartItemRaw[] }>("/api/cart");
-          if (!cancelled) setItems(data.items.map(normalizeDbItem));
+          const dbItems = data.items.map(normalizeDbItem);
+          if (!cancelled) {
+            // If the DB cart is still empty after the sync attempt (e.g. when products
+            // have not been seeded yet and the POST /api/cart calls all returned 404),
+            // restore the in-memory guest items so the user's cart isn't silently wiped.
+            setItems(dbItems.length > 0 ? dbItems : guestItems);
+          }
         } catch {
           if (!cancelled) setItems([]);
         }
