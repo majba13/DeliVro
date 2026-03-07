@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     const accessToken = await new SignJWT({ sub: user.id, role: user.role })
       .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("15m")
+      .setExpirationTime("1h")
       .sign(ACCESS_SECRET);
 
     const refreshToken = await new SignJWT({

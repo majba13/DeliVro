@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -16,8 +16,10 @@ const ROLES: { value: Role; label: string; desc: string }[] = [
   { value: "DeliveryMan", label: "Delivery Agent", desc: "Deliver orders" },
 ];
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
   const { register } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -43,7 +45,7 @@ export default function RegisterPage() {
     try {
       await register({ name: form.name, email: form.email, password: form.password, role: form.role });
       toast("Account created! Welcome to DeliVro 🎉", "success");
-      router.push("/dashboard");
+      router.push(callbackUrl);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Registration failed.";
       toast(message, "error");
@@ -158,5 +160,13 @@ export default function RegisterPage() {
         </p>
       </motion.div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   );
 }

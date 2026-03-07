@@ -31,7 +31,7 @@ const MFS_METHODS: PaymentMethod[] = ["BKASH", "NAGAD", "ROCKET"];
 /* ------------------------------------------------------------------ */
 export default function CheckoutPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { items, total, clearCart } = useCart();
   const { toast } = useToast();
 
@@ -44,7 +44,7 @@ export default function CheckoutPage() {
   const grandTotal = total + delivery;
 
   async function placeOrder() {
-    if (!user) { toast("Please sign in to checkout", "warning"); router.push("/login"); return; }
+    if (!user) { toast("Please sign in to checkout", "warning"); router.push("/login?callbackUrl=/checkout"); return; }
     if (items.length === 0) { toast("Your cart is empty", "warning"); return; }
     if (!address.street || !address.city) { toast("Please enter a delivery address", "warning"); return; }
 
@@ -220,7 +220,7 @@ export default function CheckoutPage() {
 
               <button
                 onClick={placeOrder}
-                disabled={loading || items.length === 0}
+                disabled={loading || authLoading || !user || items.length === 0}
                 className="mt-4 w-full rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
               >
                 {loading ? "Processing…" : MFS_METHODS.includes(method)

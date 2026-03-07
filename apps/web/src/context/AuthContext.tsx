@@ -76,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const user = (u as any).id ? u : (u as any).user as AuthUser;
         setUser(user);
       })
-      .catch(() => Tokens.clear())
+      .catch((err: unknown) => {
+        // Only clear tokens for auth failures, not network/server errors
+        if ((err as { status?: number })?.status === 401) Tokens.clear();
+      })
       .finally(() => setLoading(false));
   }, []);
 

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       role: payload.role,
     })
       .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("15m")
+      .setExpirationTime("1h")
       .sign(ACCESS_SECRET);
 
     return NextResponse.json({ accessToken });
