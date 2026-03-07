@@ -24,40 +24,7 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; icon: string; desc
   { value: "COD", label: "Cash on Delivery", icon: "💵", desc: "Pay when delivered" },
 ];
 
-/* ------------------------------------------------------------------ */
-/* MFS phone number step                                                */
-/* ------------------------------------------------------------------ */
-function MfsForm({ method, onSubmit }: { method: PaymentMethod; onSubmit: (phone: string, txId: string) => void }) {
-  const [phone, setPhone] = useState("");
-  const [txId, setTxId] = useState("");
-  return (
-    <div className="mt-4 space-y-3">
-      <div>
-        <label className="mb-1 block text-sm font-medium">{method} Number</label>
-        <input
-          type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-          placeholder="01XXXXXXXXX"
-          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">Transaction ID</label>
-        <input
-          type="text" value={txId} onChange={(e) => setTxId(e.target.value)}
-          placeholder="e.g. 8N3XK9FR2"
-          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-        />
-      </div>
-      <button
-        onClick={() => onSubmit(phone, txId)}
-        disabled={!phone || !txId}
-        className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
-      >
-        Confirm Payment
-      </button>
-    </div>
-  );
-}
+const MFS_METHODS: PaymentMethod[] = ["BKASH", "NAGAD", "ROCKET"];
 
 /* ------------------------------------------------------------------ */
 /* Page                                                                 */
@@ -69,39 +36,50 @@ export default function CheckoutPage() {
   const { toast } = useToast();
 
   const [method, setMethod] = useState<PaymentMethod>("STRIPE");
-  const [address, setAddress] = useState({ line1: "", city: "", zip: "" });
+  const [address, setAddress] = useState({ street: "", city: "", zip: "" });
   const [loading, setLoading] = useState(false);
   const [placed, setPlaced] = useState<string | null>(null);
 
-  const delivery = 4;
+  const delivery = 50; // BDT 50 fixed delivery fee — matches backend
   const grandTotal = total + delivery;
 
-  async function placeOrder(extraPayment?: Record<string, string>) {
+  async function placeOrder() {
     if (!user) { toast("Please sign in to checkout", "warning"); router.push("/login"); return; }
     if (items.length === 0) { toast("Your cart is empty", "warning"); return; }
-    if (!address.line1 || !address.city) { toast("Please enter a delivery address", "warning"); return; }
+    if (!address.street || !address.city) { toast("Please enter a delivery address", "warning"); return; }
 
     setLoading(true);
     try {
-      /* 1. Create order */
-      const orderRes = await api.post<{ id: string }>("/api/orders", {
-        items: items.map((i) => ({ productId: i.id, quantity: i.quantity, price: i.price })),
-        deliveryAddress: address,
-        paymentMethod: method,
+      /* 1. Create order from server-side cart (cart items are already synced) */
+      const orderRes = await api.post<{ order: { id: string; total: number } }>("/api/orders", {
+        deliveryAddress: {
+          street: address.street,
+          city: address.city,
+          zip: address.zip || undefined,
+          country: "Bangladesh",
+        },
       });
+      const orderId = orderRes.order.id;
 
-      /* 2. Create payment */
+      /* 2. Create payment record */
       await api.post("/api/payments", {
-        orderId: orderRes.id,
+        orderId,
         method,
-        amount: grandTotal,
-        currency: "USD",
-        ...extraPayment,
+        amount: orderRes.order.total,
       });
 
+      /* 3. Clear local cart state (server cart already cleared by order API) */
       clearCart();
-      setPlaced(orderRes.id);
-      toast("Order placed successfully! 🎉", "success");
+
+      /* 4. Route by method */
+      if (MFS_METHODS.includes(method)) {
+        // Redirect to dedicated payment page
+        router.push(`/payment/${orderId}?method=${method}`);
+      } else {
+        // COD or Bank → show success here
+        setPlaced(orderId);
+        toast("Order placed successfully! 🎉", "success");
+      }
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Order failed. Please try again.";
       toast(msg, "error");
@@ -120,7 +98,7 @@ export default function CheckoutPage() {
             ✅
           </motion.div>
           <h2 className="text-2xl font-bold">Order Placed!</h2>
-          <p className="mt-2 text-slate-500">Order <strong>{placed}</strong> is confirmed.</p>
+          <p className="mt-2 text-slate-500">Order <strong>#{placed.slice(-8).toUpperCase()}</strong> is confirmed.</p>
           <div className="mt-8 flex gap-3">
             <Link href="/orders" className="rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">
               View Orders
@@ -147,7 +125,7 @@ export default function CheckoutPage() {
               <h2 className="mb-4 font-semibold">Delivery Address</h2>
               <div className="space-y-3">
                 <input
-                  type="text" value={address.line1} onChange={(e) => setAddress((a) => ({ ...a, line1: e.target.value }))}
+                  type="text" value={address.street} onChange={(e) => setAddress((a) => ({ ...a, street: e.target.value }))}
                   placeholder="Street address"
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
                 />
@@ -185,11 +163,24 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {/* MFS additional fields */}
+              {/* MFS info banner */}
               <AnimatePresence>
-                {["BKASH", "NAGAD", "ROCKET"].includes(method) && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                    <MfsForm method={method} onSubmit={(phone, txId) => placeOrder({ mfsNumber: phone, transactionId: txId })} />
+                {MFS_METHODS.includes(method) && (
+                  <motion.div
+                    key="mfs-info"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4 overflow-hidden"
+                  >
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
+                      <p className="text-sm font-medium text-blue-800">
+                        📱 {method} Instructions will be shown after placing order
+                      </p>
+                      <p className="mt-1 text-xs text-blue-600">
+                        You will be guided through the payment steps with merchant number and reference.
+                      </p>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -200,39 +191,42 @@ export default function CheckoutPage() {
           <div className="lg:col-span-2">
             <div className="sticky top-20 rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="mb-4 font-semibold">Order Summary</h2>
-              <ul className="space-y-2 text-sm">
-                {items.map((item) => (
-                  <li key={item.id} className="flex justify-between">
-                    <span className="text-slate-700 truncate pr-2">{item.name} × {item.quantity}</span>
-                    <span className="font-medium shrink-0">${(item.price * item.quantity).toFixed(2)}</span>
-                  </li>
-                ))}
-              </ul>
+              {items.length === 0 ? (
+                <p className="text-sm text-slate-500">Your cart is empty. <Link href="/" className="text-brand-600 hover:underline">Continue shopping</Link>.</p>
+              ) : (
+                <ul className="space-y-2 text-sm">
+                  {items.map((item) => (
+                    <li key={item.id} className="flex justify-between">
+                      <span className="truncate pr-2 text-slate-700">{item.name} × {item.quantity}</span>
+                      <span className="shrink-0 font-medium">৳{(item.price * item.quantity).toFixed(2)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-600">Subtotal</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>৳{total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Delivery</span>
-                  <span className="text-emerald-600">${delivery.toFixed(2)}</span>
+                  <span className="text-emerald-600">৳{delivery.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-t border-slate-100 pt-2 text-base font-bold">
                   <span>Total</span>
-                  <span>${grandTotal.toFixed(2)}</span>
+                  <span>৳{grandTotal.toFixed(2)}</span>
                 </div>
               </div>
 
-              {/* Place order — only shown for non-MFS or COD */}
-              {(method === "STRIPE" || method === "BANK" || method === "COD") && (
-                <button
-                  onClick={() => placeOrder()}
-                  disabled={loading || items.length === 0}
-                  className="mt-4 w-full rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
-                >
-                  {loading ? "Placing order…" : `Pay $${grandTotal.toFixed(2)} · ${method}`}
-                </button>
-              )}
+              <button
+                onClick={placeOrder}
+                disabled={loading || items.length === 0}
+                className="mt-4 w-full rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {loading ? "Processing…" : MFS_METHODS.includes(method)
+                  ? `Proceed to ${method} Payment →`
+                  : `Confirm Order · ৳${grandTotal.toFixed(2)}`}
+              </button>
 
               {!user && (
                 <p className="mt-3 text-center text-xs text-slate-500">

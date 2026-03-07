@@ -80,6 +80,7 @@ model User {
   auditLogs        AuditLog[]
   cartItems        CartItem[]
   locationPings    DeliveryLocation[] @relation("DeliveryManLocations")
+  adminTransactions AdminTransaction[] @relation("AdminTransactions")
 }
 
 model AdminPermission {
@@ -276,4 +277,27 @@ model DeliveryLocation {
   @@index([deliveryManId])
   @@index([orderId])
   @@index([recordedAt])
+}
+
+// ─── Admin Transaction Messages (for auto-verification) ───────────────────
+model AdminTransaction {
+  id              String   @id @default(cuid()) @map("_id")
+  adminId         String   // Who received/entered this
+  method          PaymentMethod // BKASH, NAGAD, ROCKET
+  transactionId   String   // TXN ID from SMS/notification
+  amount          Float    // Amount received
+  senderNumber    String?  // Customer's mobile number (if available)
+  receivedAt      DateTime // When admin received the payment
+  rawMessage      String?  // Original SMS/notification text
+  isMatched       Boolean  @default(false) // Whether matched to a payment
+  matchedPaymentId String? // Payment record it matched to
+  createdAt       DateTime @default(now())
+
+  admin User @relation("AdminTransactions", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([method, transactionId])
+  @@index([method])
+  @@index([transactionId])
+  @@index([isMatched])
+  @@index([receivedAt])
 }
