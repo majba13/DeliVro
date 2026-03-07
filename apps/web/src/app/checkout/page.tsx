@@ -32,7 +32,7 @@ const MFS_METHODS: PaymentMethod[] = ["BKASH", "NAGAD", "ROCKET"];
 export default function CheckoutPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { items, total, clearCart } = useCart();
+  const { items, total, clearCart, cartLoading } = useCart();
   const { toast } = useToast();
 
   const [method, setMethod] = useState<PaymentMethod>("STRIPE");
@@ -220,10 +220,10 @@ export default function CheckoutPage() {
 
               <button
                 onClick={placeOrder}
-                disabled={loading || authLoading || !user || items.length === 0}
+                disabled={loading || authLoading || cartLoading || !user || items.length === 0}
                 className="mt-4 w-full rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
               >
-                {loading ? "Processing…" : MFS_METHODS.includes(method)
+                {loading || cartLoading ? "Loading…" : MFS_METHODS.includes(method)
                   ? `Proceed to ${method} Payment →`
                   : `Confirm Order · ৳${grandTotal.toFixed(2)}`}
               </button>

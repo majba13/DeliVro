@@ -20,7 +20,9 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "asc" },
   });
 
-  return NextResponse.json({ items });
+  const totalPrice = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+  return NextResponse.json({ items, totalPrice });
 }
 
 const addSchema = z.object({
