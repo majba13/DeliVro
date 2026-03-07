@@ -37,6 +37,30 @@ export async function requireAuth(
   }
 }
 
+/**
+ * requireRole — factory that builds a guard checking the caller has one of
+ * the specified roles.  Returns the TokenPayload on success or a
+ * 401/403 NextResponse that the route should return immediately.
+ *
+ * Usage:
+ *   const auth = await requireRole(req, "SUPER_ADMIN");
+ *   if (isAuthError(auth)) return auth;
+ *
+ * Multiple allowed roles:
+ *   const auth = await requireRole(req, "SUPER_ADMIN", "ADMIN");
+ */
+export async function requireRole(
+  req: NextRequest,
+  ...roles: string[]
+): Promise<TokenPayload | NextResponse> {
+  const auth = await requireAuth(req);
+  if (isAuthError(auth)) return auth;
+  if (!roles.includes(auth.role)) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+  return auth;
+}
+
 /** Narrow helper: check if the result is a NextResponse (auth failed). */
 export function isAuthError(v: unknown): v is NextResponse {
   return v instanceof NextResponse;

@@ -48,6 +48,14 @@ export default function AdminDashboard() {
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+  const [createAdminForm, setCreateAdminForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "ADMIN",
+  });
+  const [createAdminLoading, setCreateAdminLoading] = useState(false);
 
   useEffect(() => {
     if (!isLoading && (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN"))) {
@@ -125,6 +133,21 @@ export default function AdminDashboard() {
     fetchUsers();
   };
 
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateAdminLoading(true);
+    try {
+      await api.post("/api/admin/create-admin", createAdminForm);
+      setShowCreateAdminModal(false);
+      setCreateAdminForm({ name: "", email: "", password: "", role: "ADMIN" });
+      fetchUsers();
+    } catch (error: any) {
+      alert(error.message || "Failed to create admin account");
+    } finally {
+      setCreateAdminLoading(false);
+    }
+  };
+
   if (isLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -188,6 +211,14 @@ export default function AdminDashboard() {
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-bold text-slate-900">User Management</h2>
             <div className="flex gap-2">
+              {user.role === "SUPER_ADMIN" && (
+                <button
+                  onClick={() => setShowCreateAdminModal(true)}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                >
+                  + Create Admin
+                </button>
+              )}
               <form onSubmit={handleSearch} className="flex gap-2">
                 <input
                   type="text"
@@ -316,6 +347,92 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {/* Create Admin Modal */}
+      {showCreateAdminModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900">Create Staff Account</h3>
+              <button
+                onClick={() => setShowCreateAdminModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleCreateAdmin} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={createAdminForm.name}
+                  onChange={(e) => setCreateAdminForm((f) => ({ ...f, name: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  placeholder="Jane Smith"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={createAdminForm.email}
+                  onChange={(e) => setCreateAdminForm((f) => ({ ...f, email: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  placeholder="admin@example.com"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={createAdminForm.password}
+                  onChange={(e) => setCreateAdminForm((f) => ({ ...f, password: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  placeholder="Min 8 characters"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Role</label>
+                <select
+                  value={createAdminForm.role}
+                  onChange={(e) => setCreateAdminForm((f) => ({ ...f, role: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                >
+                  <option value="ADMIN">Admin</option>
+                  <option value="SHOP_OWNER">Shop Owner</option>
+                  <option value="DELIVERY_MAN">Delivery Man</option>
+                  <option value="CUSTOMER">Customer</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateAdminModal(false)}
+                  className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createAdminLoading}
+                  className="flex-1 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                >
+                  {createAdminLoading ? "Creating…" : "Create Account"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

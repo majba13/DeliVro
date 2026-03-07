@@ -23,6 +23,8 @@ const ROLE_DISPLAY: Record<string, string> = {
   CUSTOMER: "Customer",
 };
 
+const SUPER_ADMIN_EMAIL = "majbauddin.study@gmail.com";
+
 const schema = z.object({
   identity: z.string().optional(),
   email: z.string().optional(),
@@ -60,6 +62,15 @@ export async function POST(req: NextRequest) {
         { message: "Invalid credentials" },
         { status: 401 }
       );
+
+    // Auto-promote the designated SuperAdmin email if their role was set incorrectly
+    if (user.email === SUPER_ADMIN_EMAIL && user.role !== "SUPER_ADMIN") {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: "SUPER_ADMIN" },
+      });
+      (user as any).role = "SUPER_ADMIN";
+    }
 
     const accessToken = await new SignJWT({ sub: user.id, role: user.role })
       .setProtectedHeader({ alg: "HS256" })
