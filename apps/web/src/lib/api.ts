@@ -44,10 +44,17 @@ async function request<T>(
 ): Promise<T> {
   const { noAuth = false, ...init } = options ?? {};
 
+  const isFormData =
+    typeof FormData !== "undefined" &&
+    init.body instanceof FormData;
+
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...(init.headers as Record<string, string>),
   };
+
+  if (!isFormData && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (!noAuth && Tokens.access) {
     headers["Authorization"] = `Bearer ${Tokens.access}`;
@@ -93,13 +100,23 @@ export const api = {
     request<T>(path, {
       ...opts,
       method: "POST",
-      body: body ? JSON.stringify(body) : undefined,
+      body:
+        body === undefined
+          ? undefined
+          : (typeof FormData !== "undefined" && body instanceof FormData)
+            ? body
+            : JSON.stringify(body),
     }),
   patch: <T = any>(path: string, body?: unknown, opts?: RequestInit) =>
     request<T>(path, {
       ...opts,
       method: "PATCH",
-      body: body ? JSON.stringify(body) : undefined,
+      body:
+        body === undefined
+          ? undefined
+          : (typeof FormData !== "undefined" && body instanceof FormData)
+            ? body
+            : JSON.stringify(body),
     }),
   delete: <T = any>(path: string, opts?: RequestInit) =>
     request<T>(path, { ...opts, method: "DELETE" }),

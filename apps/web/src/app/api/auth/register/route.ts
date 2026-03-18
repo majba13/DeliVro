@@ -16,11 +16,18 @@ const REFRESH_SECRET = new TextEncoder().encode(
 );
 
 const ROLE_FROM_CLIENT: Record<string, string> = {
+  // Display-name format (legacy frontend)
   SuperAdmin: "SUPER_ADMIN",
   Admin: "ADMIN",
   ShopOwner: "SHOP_OWNER",
   DeliveryMan: "DELIVERY_MAN",
   Customer: "CUSTOMER",
+  // Raw enum format (current frontend sends these)
+  SUPER_ADMIN: "SUPER_ADMIN",
+  ADMIN: "ADMIN",
+  SHOP_OWNER: "SHOP_OWNER",
+  DELIVERY_MAN: "DELIVERY_MAN",
+  CUSTOMER: "CUSTOMER",
 };
 
 const ROLE_DISPLAY: Record<string, string> = {

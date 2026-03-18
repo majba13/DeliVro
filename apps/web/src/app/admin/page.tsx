@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
+import { AnalyticsCards } from "@/components/AnalyticsCards";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 
@@ -26,24 +27,54 @@ interface User {
   }[];
 }
 
-interface Stats {
-  totalUsers: number;
-  activeShops: number;
-  pendingPayments: number;
-  activeDeliveries: number;
+interface AdminStatsResponse {
+  users: {
+    total: number;
+    newToday: number;
+    byRole: Record<string, number>;
+  };
+  orders: {
+    total: number;
+    today: number;
+    last30Days: number;
+    pending: number;
+    byStatus: Record<string, number>;
+    recent: Array<{
+      id: string;
+      total: number;
+      status: string;
+      createdAt: string;
+      customer: { name: string | null; email: string | null };
+    }>;
+  };
+  products: {
+    total: number;
+    active: number;
+  };
+  shops: {
+    total: number;
+    pendingApproval: number;
+  };
+  revenue: {
+    total: number;
+    last30Days: number;
+    today: number;
+  };
+  payments: {
+    pendingVerification: number;
+  };
+  deliveries: {
+    active: number;
+  };
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  const [stats, setStats] = useState<Stats>({
-    totalUsers: 0,
-    activeShops: 0,
-    pendingPayments: 0,
-    activeDeliveries: 0,
-  });
+  const [stats, setStats] = useState<AdminStatsResponse | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -56,6 +87,7 @@ export default function AdminDashboard() {
     role: "ADMIN",
   });
   const [createAdminLoading, setCreateAdminLoading] = useState(false);
+  const [seedLoading, setSeedLoading] = useState(false);
 
   useEffect(() => {
     if (!isLoading && (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN"))) {
@@ -88,18 +120,13 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      // Fetch basic stats
-      const usersData = await api.get<{ users: User[] }>("/api/admin/users");
-      const allUsers = usersData.users || [];
-
-      setStats({
-        totalUsers: allUsers.length,
-        activeShops: allUsers.filter((u: User) => u.role === "SHOP_OWNER" && u.isActive).length,
-        pendingPayments: 0, // Will be populated by payment API
-        activeDeliveries: 0, // Will be populated by delivery API
-      });
+      setLoadingStats(true);
+      const data = await api.get<AdminStatsResponse>("/api/admin/stats");
+      setStats(data);
     } catch (error) {
       console.error("Failed to fetch stats:", error);
+    } finally {
+      setLoadingStats(false);
     }
   };
 
@@ -133,8 +160,7 @@ export default function AdminDashboard() {
     fetchUsers();
   };
 
-  const handleCreateAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateAdmin = async (e: React.FormEvent) => {    e.preventDefault();
     setCreateAdminLoading(true);
     try {
       await api.post("/api/admin/create-admin", createAdminForm);
@@ -145,6 +171,19 @@ export default function AdminDashboard() {
       alert(error.message || "Failed to create admin account");
     } finally {
       setCreateAdminLoading(false);
+    }
+  };
+
+  const handleSeedProducts = async () => {
+    if (!confirm("This will add 12 demo products to the database. Continue?")) return;
+    setSeedLoading(true);
+    try {
+      const res = await api.post<{ message: string; seeded: number }>("/api/admin/seed-products");
+      alert(res.message);
+    } catch (error: any) {
+      alert(error.message || "Failed to seed products");
+    } finally {
+      setSeedLoading(false);
     }
   };
 
@@ -174,12 +213,55 @@ export default function AdminDashboard() {
 
         {/* Stats Cards */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total Users" value={stats.totalUsers} color="text-brand-700" icon="👥" />
-          <StatCard label="Active Shops" value={stats.activeShops} color="text-emerald-700" icon="🏪" />
+          <StatCard
+            label="Total Users"
+            value={loadingStats ? "..." : stats?.users.total ?? 0}
+            color="text-brand-700"
+            icon="👥"
+          />
+          <StatCard
+            label="Active Shops"
+            value={loadingStats ? "..." : (stats?.shops.total ?? 0) - (stats?.shops.pendingApproval ?? 0)}
+            color="text-emerald-700"
+            icon="🏪"
+          />
           <Link href="/admin/payments">
-            <StatCard label="Pending Payments" value={stats.pendingPayments} color="text-amber-700" icon="💳" />
+            <StatCard
+              label="Pending Payments"
+              value={loadingStats ? "..." : stats?.payments.pendingVerification ?? 0}
+              color="text-amber-700"
+              icon="💳"
+            />
           </Link>
-          <StatCard label="Active Deliveries" value={stats.activeDeliveries} color="text-indigo-700" icon="🚚" />
+          <StatCard
+            label="Active Deliveries"
+            value={loadingStats ? "..." : stats?.deliveries.active ?? 0}
+            color="text-indigo-700"
+            icon="🚚"
+          />
+        </div>
+
+        <div className="mb-8 grid gap-4 lg:grid-cols-2">
+          <AnalyticsCards
+            title="Order Status Distribution"
+            data={Object.entries(stats?.orders.byStatus ?? {}).map(([label, value]) => ({
+              label: label.replace(/_/g, " "),
+              value,
+            }))}
+          />
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-700">Revenue Snapshot</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <MetricCard label="Today" value={`৳${Math.round(stats?.revenue.today ?? 0)}`} />
+              <MetricCard label="Last 30 days" value={`৳${Math.round(stats?.revenue.last30Days ?? 0)}`} />
+              <MetricCard label="All time" value={`৳${Math.round(stats?.revenue.total ?? 0)}`} />
+            </div>
+            <div className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
+              Orders today: <span className="font-semibold text-slate-700">{stats?.orders.today ?? 0}</span>
+              <span className="mx-2">•</span>
+              Pending orders: <span className="font-semibold text-slate-700">{stats?.orders.pending ?? 0}</span>
+            </div>
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -198,12 +280,27 @@ export default function AdminDashboard() {
               icon="📍"
             />
           </Link>
+          <Link href="/admin/shops">
+            <ActionCard
+              title="Shop Approvals"
+              description="Approve or reject shop owner registrations"
+              icon="🏪"
+            />
+          </Link>
           <ActionCard
             title="User Management"
             description="Manage user roles and permissions below"
             icon="🔑"
             onClick={() => document.getElementById("user-table")?.scrollIntoView({ behavior: "smooth" })}
           />
+          {user.role === "SUPER_ADMIN" && (
+            <ActionCard
+              title={seedLoading ? "Seeding…" : "Seed Demo Products"}
+              description="Populate the database with 12 demo products (one-time, only if empty)"
+              icon="🌱"
+              onClick={handleSeedProducts}
+            />
+          )}
         </div>
 
         {/* User Management Section */}
@@ -346,6 +443,42 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-bold text-slate-900">Recent Orders</h2>
+          {(stats?.orders.recent?.length ?? 0) === 0 ? (
+            <p className="text-sm text-slate-500">No recent orders found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-slate-200 bg-slate-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700">Order</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700">Customer</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700">Amount</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700">Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700">Time</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {stats?.orders.recent.map((order) => (
+                    <tr key={order.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 text-sm font-medium text-slate-800">#{order.id.slice(-6).toUpperCase()}</td>
+                      <td className="px-3 py-2 text-sm text-slate-600">{order.customer?.name ?? order.customer?.email ?? "Unknown"}</td>
+                      <td className="px-3 py-2 text-sm font-semibold text-slate-800">৳{Math.round(order.total)}</td>
+                      <td className="px-3 py-2 text-sm">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                          {order.status.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{new Date(order.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Create Admin Modal */}
@@ -480,6 +613,15 @@ function ActionCard({
       <div className="mb-2 text-2xl">{icon}</div>
       <h3 className="font-semibold text-slate-900">{title}</h3>
       <p className="mt-1 text-xs text-slate-500">{description}</p>
+    </div>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-bold text-slate-900">{value}</p>
     </div>
   );
 }

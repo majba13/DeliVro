@@ -18,8 +18,17 @@ Set-Location $repo
 
 Write-Host "`n=== DeliVro Deploy ===" -ForegroundColor Cyan
 
+# ── 0. Preflight checks ───────────────────────────────────────
+Write-Host "`n[0/5] Running market preflight checks..." -ForegroundColor Yellow
+powershell -ExecutionPolicy Bypass -File ".\scripts\market-preflight.ps1" 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Preflight failed. Fix issues before deploy." -ForegroundColor Red
+    exit 1
+}
+Write-Host "  Preflight passed." -ForegroundColor Green
+
 # ── 1. Verify token ───────────────────────────────────────────
-Write-Host "`n[1/4] Verifying token..." -ForegroundColor Yellow
+Write-Host "`n[1/5] Verifying token..." -ForegroundColor Yellow
 $me = vercel whoami --token $Token 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Invalid token. Get one from https://vercel.com/account/tokens" -ForegroundColor Red
@@ -28,7 +37,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "  Authenticated as: $me" -ForegroundColor Green
 
 # ── 2. Link project (first time only) ────────────────────────
-Write-Host "`n[2/4] Linking project..." -ForegroundColor Yellow
+Write-Host "`n[2/5] Linking project..." -ForegroundColor Yellow
 if (-not (Test-Path ".vercel\project.json")) {
     vercel link --token $Token --yes --cwd $repo 2>&1
 } else {
@@ -36,7 +45,7 @@ if (-not (Test-Path ".vercel\project.json")) {
 }
 
 # ── 3. Push env vars ─────────────────────────────────────────
-Write-Host "`n[3/4] Pushing env vars to Vercel production..." -ForegroundColor Yellow
+Write-Host "`n[3/5] Pushing env vars to Vercel production..." -ForegroundColor Yellow
 
 function Add-Env($name, $value) {
     Write-Host "  + $name" -ForegroundColor Cyan
@@ -58,7 +67,7 @@ if (Test-Path $envFile) {
 }
 
 # ── 4. Deploy ─────────────────────────────────────────────────
-Write-Host "`n[4/4] Deploying to production..." -ForegroundColor Yellow
+Write-Host "`n[4/5] Deploying to production..." -ForegroundColor Yellow
 $result = vercel --prod --token $Token --yes --cwd $repo 2>&1
 Write-Host $result
 
@@ -69,3 +78,5 @@ if ($result -match "https://") {
 } else {
     Write-Host "`nDeploy output above — check for errors." -ForegroundColor DarkYellow
 }
+
+Write-Host "`n[5/5] Done." -ForegroundColor Green

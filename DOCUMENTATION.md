@@ -1,5 +1,7 @@
 # DeliVro — Project Documentation
 
+> Architecture and folder-structure note: [ARCHITECTURE.md](./ARCHITECTURE.md) is now the authoritative reference for the current repository layout and runtime design. Parts of this file describe an older deployment model.
+
 > **Version:** 1.0.0 | **Stack:** Next.js 16 · TypeScript · TailwindCSS · Prisma · PostgreSQL · Vercel
 
 ---

@@ -1,11 +1,15 @@
 # ============================================================
 # scripts/vercel-env-push.ps1
 #
-# Pushes all environment variables to Vercel (production).
-# Prerequisites:
-#   1. Run  vercel login  first (or authenticate via dashboard)
-#   2. Fill in every REPLACE_ME value below before running
-#   3. Run from the repo root:  .\scripts\vercel-env-push.ps1
+# Pushes selected environment variables to Vercel.
+#
+# SAFE-BY-DEFAULT:
+# - No real secrets are hardcoded in this script.
+# - Script will fail if any value still contains REPLACE_ME.
+#
+# Usage:
+#   1) Fill the variables below
+#   2) Run from repo root: .\scripts\vercel-env-push.ps1
 # ============================================================
 
 $ErrorActionPreference = "Stop"
@@ -23,27 +27,32 @@ function Add-VercelEnv {
 
 Write-Host "=== DeliVro — Vercel env push ===" -ForegroundColor Yellow
 
-# ── JWT ───────────────────────────────────────────────────────
-Add-VercelEnv "JWT_ACCESS_SECRET"  "a595de925ca625d340483a3a30a8183ae4d3230af2558dd7505b352f2a653abf4e3b53ef97cddbd6d099f863d5c6d646"
-Add-VercelEnv "JWT_REFRESH_SECRET" "98137ad7194e4d832b27ea551afdb61ca234c0da24478b8b87a08bf877b1583766ece67497fcb7529a69cda6427c6e1c"
+$VarsToPush = @(
+    @{ Name = "NEXT_PUBLIC_API_URL"; Value = "REPLACE_ME" }
+    @{ Name = "NEXT_PUBLIC_WS_URL"; Value = "REPLACE_ME" }
+    @{ Name = "NEXT_PUBLIC_SSE_URL"; Value = "REPLACE_ME" }
+    @{ Name = "NEXT_PUBLIC_SITE_URL"; Value = "REPLACE_ME" }
 
-# ── API URL (point to your deployed gateway, e.g. Railway/Render) ─
-Add-VercelEnv "NEXT_PUBLIC_API_URL"  "https://api.delivro.com"
-Add-VercelEnv "NEXT_PUBLIC_WS_URL"   "wss://api.delivro.com/track"
-Add-VercelEnv "NEXT_PUBLIC_SSE_URL"  "https://api.delivro.com/track-sse"
+    @{ Name = "NEXT_PUBLIC_FIREBASE_API_KEY"; Value = "REPLACE_ME" }
+    @{ Name = "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"; Value = "REPLACE_ME" }
+    @{ Name = "NEXT_PUBLIC_FIREBASE_DATABASE_URL"; Value = "REPLACE_ME" }
+    @{ Name = "NEXT_PUBLIC_FIREBASE_PROJECT_ID"; Value = "REPLACE_ME" }
 
-# ── Firebase public ───────────────────────────────────────────
-Add-VercelEnv "NEXT_PUBLIC_FIREBASE_API_KEY"        "REPLACE_ME"
-Add-VercelEnv "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"    "your-project-id.firebaseapp.com"
-Add-VercelEnv "NEXT_PUBLIC_FIREBASE_DATABASE_URL"   "https://your-project-id-default-rtdb.firebaseio.com"
-Add-VercelEnv "NEXT_PUBLIC_FIREBASE_PROJECT_ID"     "your-project-id"
+    @{ Name = "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME"; Value = "REPLACE_ME" }
+    @{ Name = "NEXT_TELEMETRY_DISABLED"; Value = "1" }
+)
 
-# ── Misc ─────────────────────────────────────────────────────
-Add-VercelEnv "NEXT_TELEMETRY_DISABLED" "1"
+foreach ($item in $VarsToPush) {
+    if ($item.Value -match "REPLACE_ME") {
+        Write-Host "ERROR: $($item.Name) is still REPLACE_ME. Update the script first." -ForegroundColor Red
+        exit 1
+    }
+    Add-VercelEnv $item.Name $item.Value "production"
+    Add-VercelEnv $item.Name $item.Value "preview"
+}
 
 Write-Host ""
 Write-Host "✓ Done! To verify, run:  vercel env ls --prod" -ForegroundColor Green
 Write-Host ""
-Write-Host "NOTE: Backend secrets (DATABASE_URL, STRIPE_*, SMTP_*, etc.)" -ForegroundColor DarkYellow
-Write-Host "      belong on your backend host (Railway / Render / Fly.io)," -ForegroundColor DarkYellow
-Write-Host "      NOT on Vercel. Add them via those platforms' dashboards." -ForegroundColor DarkYellow
+Write-Host "NOTE: Private backend secrets (DATABASE_URL, JWT_*, STRIPE_*, SMTP_*, CLOUDINARY_API_*)" -ForegroundColor DarkYellow
+Write-Host "      should be set on the backend host / runtime, not exposed to the browser." -ForegroundColor DarkYellow

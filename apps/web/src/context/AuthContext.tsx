@@ -22,12 +22,24 @@ export type UserRole =
   | "ADMIN"
   | "SHOP_OWNER"
   | "DELIVERY_MAN"
-  | "CUSTOMER"
-  | "SuperAdmin"
-  | "Admin"
-  | "ShopOwner"
-  | "DeliveryMan"
-  | "Customer";
+  | "CUSTOMER";
+
+/** Map display format (returned by API) back to the canonical raw role enum. */
+const DISPLAY_TO_RAW: Record<string, UserRole> = {
+  SuperAdmin: "SUPER_ADMIN",
+  Admin: "ADMIN",
+  ShopOwner: "SHOP_OWNER",
+  DeliveryMan: "DELIVERY_MAN",
+  Customer: "CUSTOMER",
+};
+
+function normalizeRole(role: string): UserRole {
+  return DISPLAY_TO_RAW[role] ?? (role as UserRole);
+}
+
+function normalizeUser(u: AuthUser): AuthUser {
+  return { ...u, role: normalizeRole(u.role as string) };
+}
 
 export interface AuthUser {
   id: string;
@@ -73,8 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .get<AuthUser>("/api/auth/me")
       .then((u) => {
         // Backend may return user directly or wrapped in { user }
-        const user = (u as any).id ? u : (u as any).user as AuthUser;
-        setUser(user);
+        const raw = (u as any).id ? u : (u as any).user as AuthUser;
+        setUser(normalizeUser(raw));
       })
       .catch((err: unknown) => {
         // Only clear tokens for auth failures, not network/server errors
@@ -90,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: AuthUser;
     }>("/api/auth/login", { identity: email, password }, { noAuth: true } as never);
     Tokens.set(data.accessToken, data.refreshToken);
-    setUser(data.user);
+    setUser(normalizeUser(data.user));
   }, []);
 
   const register = useCallback(async (payload: RegisterPayload) => {
@@ -100,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: AuthUser;
     }>("/api/auth/register", payload, { noAuth: true } as never);
     Tokens.set(data.accessToken, data.refreshToken);
-    setUser(data.user);
+    setUser(normalizeUser(data.user));
   }, []);
 
   const logout = useCallback(() => {

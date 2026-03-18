@@ -13,7 +13,9 @@ export const productCategorySchema = z.enum([
   "GROCERIES",
   "STATIONARY",
   "MEDICINE",
-  "WEAR"
+  "WEAR",
+  "ELECTRONICS",
+  "EMERGENCY",
 ]);
 
 export const createProductSchema = z.object({

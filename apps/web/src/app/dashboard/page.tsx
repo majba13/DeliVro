@@ -90,29 +90,68 @@ function AdminPanel() {
 }
 
 function ShopOwnerPanel() {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    shops: 0,
+    products: 0,
+    pendingShops: 0,
+    pendingOrders: 0,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [shopsData, ordersData] = await Promise.all([
+          api.get<{ shops: Array<{ isApproved: boolean; _count?: { products: number } }> }>("/api/shops?mine=true"),
+          api.get<{ orders: Array<{ status: string }> }>("/api/orders?limit=100"),
+        ]);
+
+        if (cancelled) return;
+
+        const shops = shopsData.shops ?? [];
+        const products = shops.reduce((sum, s) => sum + (s._count?.products ?? 0), 0);
+        const pendingShops = shops.filter((s) => !s.isApproved).length;
+        const pendingOrders = (ordersData.orders ?? []).filter((o) => o.status === "PENDING").length;
+
+        setStats({
+          shops: shops.length,
+          products,
+          pendingShops,
+          pendingOrders,
+        });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Products" value="38" color="text-brand-700" />
-        <StatCard label="Today's Orders" value="21" delta="+6 new" color="text-emerald-700" />
-        <StatCard label="Revenue (Month)" value="$3,840" delta="+12%" color="text-indigo-700" />
-        <StatCard label="Low Stock" value="4" color="text-amber-700" />
+        <StatCard label="My Shops" value={loading ? "..." : stats.shops} color="text-brand-700" />
+        <StatCard label="Total Products" value={loading ? "..." : stats.products} color="text-emerald-700" />
+        <StatCard label="Pending Shop Approvals" value={loading ? "..." : stats.pendingShops} color="text-amber-700" />
+        <StatCard label="Pending Orders" value={loading ? "..." : stats.pendingOrders} color="text-indigo-700" />
       </div>
-      <AnalyticsCards />
       <div className="grid gap-4 md:grid-cols-3">
         {[
-          { title: "Add Product", desc: "List a new product with pricing, images, and inventory details.", href: "#", icon: "➕" },
-          { title: "Manage Inventory", desc: "Update stock levels and review low-stock alerts.", href: "#", icon: "📦" },
-          { title: "Order Processing", desc: "Confirm pending orders and mark items as ready for dispatch.", href: "#", icon: "🛒" },
-          { title: "Customer Reviews", desc: "View and respond to customer ratings and feedback.", href: "#", icon: "⭐" },
-          { title: "Promotions", desc: "Create discounts, flash sales, and bundle deals.", href: "#", icon: "🏷️" },
-          { title: "Shop Analytics", desc: "Track sales trends, top products, and revenue breakdowns.", href: "#", icon: "📈" },
+          { title: "My Shops", desc: "Create shops and manage product catalogs per store.", href: "/shops/my", icon: "🏪" },
+          { title: "Orders", desc: "Review incoming orders and update preparation status.", href: "/orders", icon: "🛒" },
+          { title: "Browse Marketplace", desc: "Check competitor pricing and discover trending items.", href: "/products", icon: "🔎" },
+          { title: "Delivery Tracking", desc: "Monitor active deliveries connected to your orders.", href: "/tracking", icon: "📍" },
+          { title: "Notifications", desc: "Review alerts for new orders, assignments, and updates.", href: "/dashboard", icon: "🔔" },
+          { title: "Public Shop Listing", desc: "Preview how your shops appear to customers.", href: "/shops", icon: "✨" },
         ].map((item) => (
-          <div key={item.title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <Link key={item.title} href={item.href} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-brand-300 hover:shadow-md">
             <div className="mb-2 text-2xl">{item.icon}</div>
             <h3 className="font-semibold">{item.title}</h3>
             <p className="mt-1 text-xs text-slate-500">{item.desc}</p>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
@@ -200,11 +239,6 @@ const ROLE_LABELS: Record<UserRole, string> = {
   SHOP_OWNER: "Shop Owner",
   DELIVERY_MAN: "Delivery Agent",
   CUSTOMER: "Customer",
-  SuperAdmin: "Super Administrator",
-  Admin: "Platform Admin",
-  ShopOwner: "Shop Owner",
-  DeliveryMan: "Delivery Agent",
-  Customer: "Customer",
 };
 
 export default function DashboardPage() {
@@ -231,11 +265,11 @@ export default function DashboardPage() {
 
   function renderPanel() {
     switch (user!.role) {
-      case "SuperAdmin": return <SuperAdminPanel />;
-      case "Admin":      return <AdminPanel />;
-      case "ShopOwner":  return <ShopOwnerPanel />;
-      case "DeliveryMan":return <DeliveryManPanel />;
-      default:           return <CustomerPanel name={user!.name} />;
+      case "SUPER_ADMIN": return <SuperAdminPanel />;
+      case "ADMIN":       return <AdminPanel />;
+      case "SHOP_OWNER":  return <ShopOwnerPanel />;
+      case "DELIVERY_MAN":return <DeliveryManPanel />;
+      default:            return <CustomerPanel name={user!.name} />;
     }
   }
 

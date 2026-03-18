@@ -119,10 +119,11 @@ function ProductCard({ product }: { product: Product }) {
 function ProductsContent() {
   const params = useSearchParams();
   const urlCategory = params.get("category") ?? "All";
+  const urlQuery = params.get("q") ?? "";
 
   const [products, setProducts] = useState<Product[]>(DEMO_PRODUCTS);
   const [loading, setLoading] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(urlQuery);
   const [category, setCategory] = useState(urlCategory);
   const [sort, setSort] = useState("featured");
 
@@ -130,6 +131,10 @@ function ProductsContent() {
   useEffect(() => {
     setCategory(urlCategory);
   }, [urlCategory]);
+
+  useEffect(() => {
+    setQuery(urlQuery);
+  }, [urlQuery]);
 
   /* Fetch real products from API */
   useEffect(() => {

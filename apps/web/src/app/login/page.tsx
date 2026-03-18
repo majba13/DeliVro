@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -12,10 +12,17 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
-  const { login } = useAuth();
+  const { login, user, isLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+
+  /* Redirect already-authenticated users so they never see the login page twice */
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace(callbackUrl);
+    }
+  }, [isLoading, user, callbackUrl, router]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

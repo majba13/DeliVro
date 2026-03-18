@@ -7,9 +7,9 @@ const CATEGORIES = [
   { label: "FOOD",        slug: "Food",        emoji: "🍱", bg: "from-orange-50 to-orange-100",  border: "border-orange-200", text: "text-orange-700",  desc: "Fresh meals & snacks" },
   { label: "GROCERIES",   slug: "Groceries",   emoji: "🛒", bg: "from-green-50 to-green-100",    border: "border-green-200",  text: "text-green-700",   desc: "Daily essentials" },
   { label: "MEDICINE",    slug: "Medicine",    emoji: "💊", bg: "from-red-50 to-red-100",        border: "border-red-200",    text: "text-red-700",     desc: "Health & wellness" },
+  { label: "EMERGENCY",   slug: "Emergency",   emoji: "🚨", bg: "from-rose-50 to-rose-100",      border: "border-rose-200",   text: "text-rose-700",    desc: "Urgent supplies" },
   { label: "STATIONARY",  slug: "Stationary",  emoji: "📚", bg: "from-blue-50 to-blue-100",      border: "border-blue-200",   text: "text-blue-700",    desc: "Office & school" },
   { label: "WEAR",        slug: "Wear",        emoji: "👗", bg: "from-purple-50 to-purple-100",  border: "border-purple-200", text: "text-purple-700",  desc: "Fashion & apparel" },
-  { label: "ELECTRONICS", slug: "Electronics", emoji: "📱", bg: "from-indigo-50 to-indigo-100",  border: "border-indigo-200", text: "text-indigo-700",  desc: "Gadgets & devices" },
 ];
 
 export function CategorySlider() {

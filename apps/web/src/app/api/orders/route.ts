@@ -171,6 +171,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Notify shop owner about the new order.
+    await tx.notification.create({
+      data: {
+        userId: ownerId,
+        title: "New Order Received",
+        message: `You received a new order #${newOrder.id.slice(-6).toUpperCase()}.`,
+        channel: "in_app",
+        payload: { orderId: newOrder.id, customerId: auth.sub },
+      },
+    });
+
     return newOrder;
   });
 

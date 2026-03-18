@@ -12,7 +12,8 @@ const ProductCategory = {
   STATIONARY: "STATIONARY",
   MEDICINE: "MEDICINE",
   WEAR: "WEAR",
-  ELECTRONICS: "ELECTRONICS"
+  ELECTRONICS: "ELECTRONICS",
+  EMERGENCY: "EMERGENCY"
 } as const;
 type ProductCategory = (typeof ProductCategory)[keyof typeof ProductCategory];
 
@@ -45,8 +46,12 @@ const productSchema = z.object({
   description: z.string().min(5),
   category: z.nativeEnum(ProductCategory),
   price: z.number().positive(),
+  discount: z.number().min(0).max(100).optional(),
+  unit: z.string().max(30).optional(),
   stock: z.number().int().nonnegative(),
-  images: z.array(z.string().url()).default([])
+  shopId: z.string().optional(),
+  images: z.array(z.string().url()).default([]),
+  tags: z.array(z.string()).default([])
 });
 
 app.get("/", async (request) => {
@@ -74,11 +79,15 @@ app.post("/", { preHandler: (app as any).authenticate }, async (request: any, re
   const product = await prisma.product.create({
     data: {
       ownerId: user.sub,
+      shopId: body.shopId ?? null,
       name: body.name,
       description: body.description,
       category: body.category,
       price: body.price,
+      discount: body.discount ?? null,
+      unit: body.unit ?? null,
       images: body.images,
+      tags: body.tags,
       inventory: { create: { stock: body.stock } }
     },
     include: { inventory: true }
@@ -97,15 +106,12 @@ app.patch("/:id", { preHandler: (app as any).authenticate }, async (request: any
   const canManage = ([RoleType.SUPER_ADMIN, RoleType.ADMIN] as string[]).includes(user.role) || existing.ownerId === user.sub;
   if (!canManage) return reply.status(403).send({ message: "Not allowed" });
 
+  const { stock, ...rest } = body;
   const updated = await prisma.product.update({
     where: { id },
     data: {
-      name: body.name,
-      description: body.description,
-      category: body.category,
-      price: body.price,
-      images: body.images,
-      inventory: body.stock !== undefined ? { update: { stock: body.stock } } : undefined
+      ...rest,
+      inventory: stock !== undefined ? { update: { stock } } : undefined
     },
     include: { inventory: true }
   });

@@ -8,12 +8,12 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { ApiError } from "@/lib/api";
 
-type Role = "Customer" | "ShopOwner" | "DeliveryMan";
+type Role = "CUSTOMER" | "SHOP_OWNER" | "DELIVERY_MAN";
 
 const ROLES: { value: Role; label: string; desc: string }[] = [
-  { value: "Customer", label: "Customer", desc: "Shop and track deliveries" },
-  { value: "ShopOwner", label: "Shop Owner", desc: "List and sell products" },
-  { value: "DeliveryMan", label: "Delivery Agent", desc: "Deliver orders" },
+  { value: "CUSTOMER", label: "Customer", desc: "Shop and track deliveries" },
+  { value: "SHOP_OWNER", label: "Shop Owner", desc: "List and sell products" },
+  { value: "DELIVERY_MAN", label: "Delivery Agent", desc: "Deliver orders" },
 ];
 
 function RegisterForm() {
@@ -28,7 +28,7 @@ function RegisterForm() {
     email: "",
     password: "",
     confirm: "",
-    role: "Customer" as Role,
+    role: "CUSTOMER" as Role,
   });
 
   async function handleSubmit(e: FormEvent) {

@@ -22,6 +22,7 @@ enum ProductCategory {
   MEDICINE
   WEAR
   ELECTRONICS
+  EMERGENCY
 }
 
 enum OrderStatus {
@@ -72,6 +73,8 @@ model User {
 
   adminPermissions AdminPermission[]
   products         Product[]
+  shops            Shop[]
+  reviews          Review[]
   customerOrders   Order[]     @relation("CustomerOrders")
   ownerOrders      Order[]     @relation("OwnerOrders")
   deliveries       Delivery[]
@@ -98,25 +101,92 @@ model AdminPermission {
   @@index([key])
 }
 
+// ─── Shop (multi-tenant store) ────────────────────────────────────────────────
+model Shop {
+  id           String   @id @default(cuid()) @map("_id")
+  ownerId      String
+  name         String
+  slug         String?  @unique
+  description  String?
+  logo         String?
+  banner       String?
+  category     ProductCategory
+  deliveryFee  Float    @default(0)
+  minOrderAmt  Float    @default(0)
+  avgRating    Float?   @default(0)
+  totalReviews Int?     @default(0)
+  isApproved   Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  // Delivery zone stored as a name/polygon in JSON
+  deliveryZone Json?
+  address      Json?
+  phone        String?
+  email        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  owner    User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  products Product[]
+  reviews  Review[]
+
+  @@index([ownerId])
+  @@index([category])
+  @@index([isApproved])
+}
+
+// ─── Review ────────────────────────────────────────────────────────────────────
+model Review {
+  id         String   @id @default(cuid()) @map("_id")
+  userId     String
+  productId  String?
+  shopId     String?
+  orderId    String?
+  rating     Int      // 1-5
+  comment    String?
+  images     String[]
+  isVisible  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  shop    Shop?    @relation(fields: [shopId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([productId])
+  @@index([shopId])
+}
+
 model Product {
   id          String          @id @default(cuid()) @map("_id")
   ownerId     String
+  shopId      String?
   name        String
+  slug        String?
   description String
   category    ProductCategory
   price       Float
+  discount    Float?          // percentage 0-100
+  unit        String?         // e.g. "500g", "1L", "per piece"
+  tags        String[]
   images      String[]
   isActive    Boolean         @default(true)
+  avgRating   Float?          @default(0)
+  totalReviews Int?           @default(0)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
   owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  shop      Shop?      @relation(fields: [shopId], references: [id], onDelete: SetNull)
   inventory Inventory?
   items     OrderItem[]
   cartItems CartItem[]
+  reviews   Review[]
 
   @@index([ownerId])
+  @@index([shopId])
   @@index([category])
+  @@index([isActive])
 }
 
 model Inventory {

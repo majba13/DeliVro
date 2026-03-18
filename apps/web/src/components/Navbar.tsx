@@ -7,10 +7,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
+import { SearchBar } from "@/components/SearchBar";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const NAV_LINKS = [
-  { href: "/", label: "Shop" },
+  { href: "/", label: "Home" },
   { href: "/products", label: "Products" },
+  { href: "/shops", label: "Shops" },
   { href: "/tracking", label: "Track Order" },
   { href: "/dashboard", label: "Dashboard" },
 ];
@@ -53,8 +56,14 @@ export function Navbar() {
             ))}
           </nav>
 
+          <div className="hidden lg:block lg:w-full lg:max-w-md">
+            <SearchBar />
+          </div>
+
           {/* Right actions */}
           <div className="flex items-center gap-3">
+            {user && <NotificationBell />}
+
             {/* Cart button */}
             <button
               onClick={() => openCart(true)}
@@ -98,6 +107,9 @@ export function Navbar() {
                       <div className="px-3 py-2 text-xs text-slate-500 border-b border-slate-100">{user.email}</div>
                       <Link href="/orders" onClick={() => setProfileOpen(false)} className="block px-3 py-2 text-sm hover:bg-slate-50">My Orders</Link>
                       <Link href="/dashboard" onClick={() => setProfileOpen(false)} className="block px-3 py-2 text-sm hover:bg-slate-50">Dashboard</Link>
+                      {user.role === "SHOP_OWNER" && (
+                        <Link href="/shops/my" onClick={() => setProfileOpen(false)} className="block px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50">My Shop</Link>
+                      )}
                       {(user.role === "SUPER_ADMIN" || user.role === "ADMIN") && (
                         <Link href="/admin" onClick={() => setProfileOpen(false)} className="block px-3 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50">Admin Panel</Link>
                       )}
@@ -133,6 +145,9 @@ export function Navbar() {
               exit={{ height: 0 }}
               className="overflow-hidden border-t border-slate-100 md:hidden"
             >
+              <div className="px-4 pt-3 pb-1">
+                <SearchBar />
+              </div>
               <nav className="flex flex-col py-2">
                 {NAV_LINKS.map((link) => (
                   <Link
