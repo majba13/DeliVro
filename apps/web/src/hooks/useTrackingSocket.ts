@@ -8,6 +8,11 @@ export function useTrackingSocket(orderId: string) {
   const [payload, setPayload] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
+    if (!orderId) {
+      setPayload(null);
+      return;
+    }
+
     const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:4005/track";
     const sseBase = process.env.NEXT_PUBLIC_SSE_URL ?? "http://localhost:4005/track-sse";
     const ws = new WebSocket(`${wsBase}/${orderId}`);
@@ -35,10 +40,22 @@ export function useTrackingSocket(orderId: string) {
       }
 
       sse = new EventSource(`${sseBase}/${orderId}`);
-      sse.onmessage = (event) => setPayload(JSON.parse(event.data));
+      sse.onmessage = (event) => {
+        try {
+          setPayload(JSON.parse(event.data));
+        } catch {
+          // ignore malformed payloads and keep previous state
+        }
+      };
     };
 
-    ws.onmessage = (event) => setPayload(JSON.parse(event.data));
+    ws.onmessage = (event) => {
+      try {
+        setPayload(JSON.parse(event.data));
+      } catch {
+        // ignore malformed payloads and keep previous state
+      }
+    };
     ws.onerror = () => connectFirebaseFallback();
     ws.onclose = () => connectFirebaseFallback();
 

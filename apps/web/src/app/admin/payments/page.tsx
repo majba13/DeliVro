@@ -146,7 +146,7 @@ export default function PaymentVerification() {
       
       await api.patch(`/api/payments/${paymentId}`, {
         status: approve ? "VERIFIED" : "FAILED",
-        verificationNote: approve ? "Manually verified by admin" : "Rejected by admin",
+        note: approve ? "Manually verified by admin" : "Rejected by admin",
       });
       await fetchPayments();
       alert(`Payment ${approve ? "approved" : "rejected"} successfully`);

@@ -159,21 +159,72 @@ function ShopOwnerPanel() {
 }
 
 function DeliveryManPanel() {
-  const [orders, setOrders] = useState<{ id: string; address: string; status: string }[]>([
-    { id: "ORD-001", address: "12 Main St, Dhaka", status: "DISPATCHED" },
-    { id: "ORD-002", address: "45 Lake View Rd, Chittagong", status: "CONFIRMED" },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<
+    Array<{ id: string; address: string; status: string; completed: boolean }>
+  >([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const data = await api.get<{
+          orders: Array<{
+            id: string;
+            status: string;
+            deliveryAddress?: { street?: string; city?: string; line1?: string };
+            delivery?: { status: string } | null;
+          }>;
+        }>("/api/orders?limit=100");
+
+        if (cancelled) return;
+
+        const mapped = (data.orders ?? []).map((o) => {
+          const address =
+            o.deliveryAddress?.street ??
+            o.deliveryAddress?.line1 ??
+            o.deliveryAddress?.city ??
+            "Address unavailable";
+          const liveStatus = o.delivery?.status ?? o.status;
+
+          return {
+            id: o.id,
+            address,
+            status: liveStatus,
+            completed: o.status === "DELIVERED",
+          };
+        });
+
+        setOrders(mapped);
+      } catch {
+        if (!cancelled) setOrders([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const assignedToday = orders.length;
+  const completed = orders.filter((o) => o.completed).length;
+  const active = orders.filter((o) => !o.completed).length;
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Assigned Today" value="8" color="text-brand-700" />
-        <StatCard label="Completed" value="5" color="text-emerald-700" />
-        <StatCard label="Earnings Today" value="$32" color="text-indigo-700" />
+        <StatCard label="Assigned Orders" value={loading ? "..." : assignedToday} color="text-brand-700" />
+        <StatCard label="Completed" value={loading ? "..." : completed} color="text-emerald-700" />
+        <StatCard label="Active" value={loading ? "..." : active} color="text-indigo-700" />
       </div>
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-3 font-semibold">Active Deliveries</h3>
-        {orders.length === 0 ? (
+        {loading ? (
+          <p className="text-sm text-slate-500">Loading deliveries...</p>
+        ) : orders.length === 0 ? (
           <p className="text-sm text-slate-500">No active deliveries right now.</p>
         ) : (
           <ul className="space-y-3">
@@ -184,7 +235,7 @@ function DeliveryManPanel() {
                   <p className="text-xs text-slate-500">{o.address}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-700">{o.status}</span>
+                  <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-700">{o.status.replace(/_/g, " ")}</span>
                   <Link href={`/tracking?orderId=${o.id}`} className="rounded-lg bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100">
                     Navigate
                   </Link>

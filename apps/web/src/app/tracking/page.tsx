@@ -12,8 +12,8 @@ import { motion } from "framer-motion";
 const TIMELINE = [
   { status: "PENDING",    label: "Order Placed",       icon: "📋" },
   { status: "CONFIRMED",  label: "Confirmed",           icon: "✅" },
-  { status: "PROCESSING", label: "Being Prepared",      icon: "🏪" },
-  { status: "DISPATCHED", label: "Out for Delivery",    icon: "🚚" },
+  { status: "PREPARING", label: "Being Prepared",      icon: "🏪" },
+  { status: "OUT_FOR_DELIVERY", label: "Out for Delivery",    icon: "🚚" },
   { status: "DELIVERED",  label: "Delivered",           icon: "🎉" },
 ];
 
@@ -31,7 +31,7 @@ function TrackingContent() {
     );
   }
 
-  const currentStatus = (update as { status?: string })?.status ?? "DISPATCHED";
+  const currentStatus = (update as { status?: string })?.status ?? "OUT_FOR_DELIVERY";
   const currentIdx = TIMELINE.findIndex((s) => s.status === currentStatus);
 
   return (

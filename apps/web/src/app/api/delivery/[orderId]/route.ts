@@ -22,7 +22,16 @@ export async function GET(
     where: { orderId },
     include: {
       deliveryMan: { select: { id: true, name: true, phone: true } },
-      order: { select: { id: true, customerId: true, ownerId: true, status: true, deliveryAddress: true } },
+      order: {
+        select: {
+          id: true,
+          customerId: true,
+          ownerId: true,
+          status: true,
+          deliveryAddress: true,
+          customer: { select: { id: true, name: true, phone: true } },
+        },
+      },
     },
   });
 

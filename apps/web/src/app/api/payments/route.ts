@@ -19,6 +19,55 @@ const schema = z.object({
   mobileReference: z.string().optional(),
 });
 
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (isAuthError(auth)) return auth;
+
+  const { searchParams } = new URL(req.url);
+  const status = searchParams.get("status") ?? undefined;
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+  const limit = Math.min(100, parseInt(searchParams.get("limit") ?? "50"));
+  const skip = (page - 1) * limit;
+
+  const adminRoles = ["SUPER_ADMIN", "ADMIN"];
+  const isAdmin = adminRoles.includes(auth.role);
+
+  const where: Record<string, unknown> = {
+    ...(status ? { status } : {}),
+  };
+
+  if (!isAdmin) {
+    if (auth.role === "SHOP_OWNER") {
+      where.order = { ownerId: auth.sub };
+    } else {
+      where.userId = auth.sub;
+    }
+  }
+
+  const [payments, total] = await Promise.all([
+    prisma.payment.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true, email: true, phone: true } },
+        order: {
+          select: {
+            id: true,
+            status: true,
+            total: true,
+            customer: { select: { id: true, name: true, email: true, phone: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.payment.count({ where }),
+  ]);
+
+  return NextResponse.json({ payments, total, page, limit });
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;

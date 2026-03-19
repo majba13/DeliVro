@@ -32,6 +32,8 @@ export async function GET(req: NextRequest) {
   if (!isAdmin) {
     if (auth.role === "SHOP_OWNER") {
       where.ownerId = auth.sub;
+    } else if (auth.role === "DELIVERY_MAN") {
+      where.delivery = { is: { deliveryManId: auth.sub } };
     } else {
       where.customerId = auth.sub;
     }
@@ -46,6 +48,7 @@ export async function GET(req: NextRequest) {
             product: { select: { id: true, name: true, images: true } },
           },
         },
+        customer: { select: { id: true, name: true, phone: true, email: true } },
         payment: { select: { id: true, method: true, status: true, amount: true } },
         delivery: { select: { id: true, status: true, etaMinutes: true } },
       },
@@ -71,7 +74,7 @@ const placeOrderSchema = z.object({
   ownerId: z.string().optional(), // If omitted, derived from first cart item's product owner
   /**
    * Fallback cart items sent by the client when the DB cart sync may have failed
-    * (e.g. temporary network issues, or a race condition on first add-to-cart).
+  * (e.g. temporary network issues, or a race condition on first add-to-cart).
    * Prices are used as-is; for production you would re-verify them from the DB.
    */
   items: z.array(z.object({

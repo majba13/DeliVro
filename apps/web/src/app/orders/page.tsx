@@ -32,8 +32,8 @@ interface Order {
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
   CONFIRMED: "bg-blue-100 text-blue-700",
-  PROCESSING: "bg-purple-100 text-purple-700",
-  DISPATCHED: "bg-indigo-100 text-indigo-700",
+  PREPARING: "bg-purple-100 text-purple-700",
+  OUT_FOR_DELIVERY: "bg-indigo-100 text-indigo-700",
   DELIVERED: "bg-emerald-100 text-emerald-700",
   CANCELLED: "bg-red-100 text-red-700",
 };
@@ -65,7 +65,7 @@ export default function OrdersPage() {
   useEffect(() => {
     if (!user) return;
     api
-      .get<{ orders: Order[] }>("/api/orders/my")
+      .get<{ orders: Order[] }>("/api/orders")
       .then((data) => {
         setOrders(data.orders ?? []);
       })
@@ -122,7 +122,7 @@ export default function OrdersPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-bold">${order.total.toFixed(2)}</span>
-                    {order.status === "DISPATCHED" || order.status === "PROCESSING" ? (
+                    {order.status === "OUT_FOR_DELIVERY" || order.status === "PREPARING" ? (
                       <Link
                         href={`/tracking?orderId=${order.id}`}
                         onClick={(e) => e.stopPropagation()}
