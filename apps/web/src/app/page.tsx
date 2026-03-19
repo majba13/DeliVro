@@ -13,10 +13,10 @@ const FEATURES = [
 ];
 
 const STATS = [
-  { value: "50,000+", label: "Happy Customers" },
-  { value: "2,500+", label: "Products Listed" },
-  { value: "200+", label: "Shop Partners" },
-  { value: "99.9%", label: "Uptime SLA" },
+  { value: "Live", label: "Order Tracking" },
+  { value: "Secure", label: "Payments" },
+  { value: "Multi", label: "Vendor Support" },
+  { value: "24/7", label: "Platform Access" },
 ];
 
 export default function HomePage() {
@@ -102,7 +102,7 @@ export default function HomePage() {
         <section className="bg-brand-600 py-16 text-white">
           <div className="container-main text-center">
             <h2 className="text-3xl font-black">Ready to start selling?</h2>
-            <p className="mt-2 text-brand-200">Join 200+ shop partners already growing with DeliVro.</p>
+            <p className="mt-2 text-brand-200">Join growing shop partners building with DeliVro.</p>
             <div className="mt-6 flex justify-center gap-3">
               <Link href="/register" className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-700 hover:bg-brand-50">
                 Open Your Shop

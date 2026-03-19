@@ -215,6 +215,14 @@ function DeliveryManPanel() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border-2 border-brand-200 bg-brand-50 p-4">
+        <h3 className="mb-2 font-semibold text-brand-900">🚚 Mobile Delivery App</h3>
+        <p className="mb-3 text-sm text-brand-700">Use the mobile interface to manage deliveries, update status, and track GPS in real-time.</p>
+        <Link href="/delivery/mobile" className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
+          Open Mobile App →
+        </Link>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Assigned Orders" value={loading ? "..." : assignedToday} color="text-brand-700" />
         <StatCard label="Completed" value={loading ? "..." : completed} color="text-emerald-700" />

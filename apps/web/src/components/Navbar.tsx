@@ -10,13 +10,46 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { SearchBar } from "@/components/SearchBar";
 import { NotificationBell } from "@/components/NotificationBell";
 
-const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/products", label: "Products" },
-  { href: "/shops", label: "Shops" },
-  { href: "/tracking", label: "Track Order" },
-  { href: "/dashboard", label: "Dashboard" },
-];
+// Role-aware navigation links
+const getNavLinks = (role?: string) => {
+  const baseLinks = [
+    { href: "/", label: "Home" },
+  ];
+
+  if (!role || role === "CUSTOMER") {
+    return [
+      ...baseLinks,
+      { href: "/products", label: "Products" },
+      { href: "/shops", label: "Shops" },
+      { href: "/orders", label: "My Orders" },
+      { href: "/tracking", label: "Track" },
+    ];
+  }
+
+  if (role === "SHOP_OWNER") {
+    return [
+      ...baseLinks,
+      { href: "/shops/my", label: "My Shop" },
+      { href: "/products", label: "Browse Products" },
+    ];
+  }
+
+  if (role === "DELIVERY_MAN") {
+    return [
+      ...baseLinks,
+      { href: "/dashboard", label: "My Deliveries" },
+    ];
+  }
+
+  if (role === "ADMIN" || role === "SUPER_ADMIN") {
+    return [
+      ...baseLinks,
+      { href: "/admin", label: "Admin" },
+    ];
+  }
+
+  return baseLinks;
+};
 
 export function Navbar() {
   const pathname = usePathname();
@@ -25,6 +58,8 @@ export function Navbar() {
   const { count, setOpen: openCart } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  const navLinks = getNavLinks(user?.role);
 
   function handleLogout() {
     logout();
@@ -45,11 +80,13 @@ export function Navbar() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-5 text-sm font-medium md:flex">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`transition-colors hover:text-brand-700 ${pathname === link.href ? "text-brand-700" : "text-slate-600"}`}
+                className={`transition-colors hover:text-brand-700 ${
+                  pathname === link.href ? "text-brand-700" : "text-slate-600"
+                }`}
               >
                 {link.label}
               </Link>
@@ -64,21 +101,23 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             {user && <NotificationBell />}
 
-            {/* Cart button */}
-            <button
-              onClick={() => openCart(true)}
-              className="relative rounded-lg p-2 hover:bg-slate-100"
-              aria-label="Open cart"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m5-9v9m4-9v9m5-9l2 9" />
-              </svg>
-              {count > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
-                  {count > 9 ? "9+" : count}
-                </span>
-              )}
-            </button>
+            {/* Cart button - only for customers */}
+            {(!user?.role || user.role === "CUSTOMER") && (
+              <button
+                onClick={() => openCart(true)}
+                className="relative rounded-lg p-2 hover:bg-slate-100"
+                aria-label="Open cart"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m5-9v9m4-9v9m5-9l2 9" />
+                </svg>
+                {count > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
+                    {count > 9 ? "9+" : count}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Auth */}
             {user ? (
@@ -149,7 +188,7 @@ export function Navbar() {
                 <SearchBar />
               </div>
               <nav className="flex flex-col py-2">
-                {NAV_LINKS.map((link) => (
+                {navLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
