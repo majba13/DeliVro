@@ -50,7 +50,16 @@ export async function GET(req: NextRequest) {
         },
         customer: { select: { id: true, name: true, phone: true, email: true } },
         payment: { select: { id: true, method: true, status: true, amount: true } },
-        delivery: { select: { id: true, status: true, etaMinutes: true } },
+        delivery: {
+          select: {
+            id: true,
+            status: true,
+            etaMinutes: true,
+            lastTrackedAt: true,
+            currentLat: true,
+            currentLng: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
       skip,
@@ -184,6 +193,113 @@ export async function POST(req: NextRequest) {
         payload: { orderId: newOrder.id, customerId: auth.sub },
       },
     });
+
+    // Auto-assign a delivery man based on city familiarity and current load.
+    const deliveryMen = await tx.user.findMany({
+      where: { role: "DELIVERY_MAN", isActive: true },
+      select: { id: true, name: true, createdAt: true },
+    });
+
+    if (deliveryMen.length > 0) {
+      const activeDeliveries = await tx.delivery.findMany({
+        where: { status: { in: ["ASSIGNED", "PICKED_UP", "ON_THE_WAY"] } },
+        select: { deliveryManId: true },
+      });
+
+      const city = (body.data.deliveryAddress.city ?? "").trim().toLowerCase();
+      const recentDeliveries = await tx.delivery.findMany({
+        take: 300,
+        orderBy: { updatedAt: "desc" },
+        select: {
+          deliveryManId: true,
+          order: { select: { deliveryAddress: true } },
+        },
+      });
+
+      const loadByDeliveryMan = new Map<string, number>();
+      for (const d of activeDeliveries) {
+        loadByDeliveryMan.set(d.deliveryManId, (loadByDeliveryMan.get(d.deliveryManId) ?? 0) + 1);
+      }
+
+      const cityExperienceByDeliveryMan = new Map<string, number>();
+      if (city) {
+        for (const d of recentDeliveries) {
+          const deliveryAddress = d.order?.deliveryAddress as { city?: string } | null;
+          const deliveryCity = (deliveryAddress?.city ?? "").trim().toLowerCase();
+          if (deliveryCity && deliveryCity === city) {
+            cityExperienceByDeliveryMan.set(
+              d.deliveryManId,
+              (cityExperienceByDeliveryMan.get(d.deliveryManId) ?? 0) + 1
+            );
+          }
+        }
+      }
+
+      const ranked = deliveryMen
+        .map((dm) => {
+          const load = loadByDeliveryMan.get(dm.id) ?? 0;
+          const cityExperience = cityExperienceByDeliveryMan.get(dm.id) ?? 0;
+          return { dm, load, cityExperience };
+        })
+        .sort((a, b) => {
+          if (b.cityExperience !== a.cityExperience) return b.cityExperience - a.cityExperience;
+          if (a.load !== b.load) return a.load - b.load;
+          return a.dm.createdAt.getTime() - b.dm.createdAt.getTime();
+        });
+
+      const selected = ranked[0];
+      if (selected) {
+        const etaMinutes = Math.min(90, 25 + selected.load * 10);
+
+        await tx.delivery.upsert({
+          where: { orderId: newOrder.id },
+          create: {
+            orderId: newOrder.id,
+            deliveryManId: selected.dm.id,
+            status: "ASSIGNED",
+            etaMinutes,
+          },
+          update: {
+            deliveryManId: selected.dm.id,
+            status: "ASSIGNED",
+            etaMinutes,
+          },
+        });
+
+        if (newOrder.status === "PENDING") {
+          await tx.order.update({
+            where: { id: newOrder.id },
+            data: { status: "CONFIRMED", estimatedMinutes: etaMinutes },
+          });
+        }
+
+        await tx.notification.createMany({
+          data: [
+            {
+              userId: selected.dm.id,
+              title: "New delivery assigned",
+              message: `Order #${newOrder.id.slice(-6).toUpperCase()} has been assigned to you.`,
+              channel: "in_app",
+              payload: { orderId: newOrder.id, etaMinutes },
+            },
+            {
+              userId: auth.sub,
+              title: "Delivery Partner Assigned",
+              message: `A delivery partner has been assigned. ETA ${etaMinutes} minutes.`,
+              channel: "in_app",
+              payload: { orderId: newOrder.id, etaMinutes },
+            },
+            {
+              userId: ownerId,
+              title: "Delivery Assigned",
+              message: `Order #${newOrder.id.slice(-6).toUpperCase()} was auto-assigned to delivery.`,
+              channel: "in_app",
+              payload: { orderId: newOrder.id, deliveryManId: selected.dm.id, etaMinutes },
+            },
+          ],
+        });
+      }
+    }
 
     return newOrder;
   });

@@ -122,7 +122,7 @@ export default function OrdersPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-bold">${order.total.toFixed(2)}</span>
-                    {order.status === "OUT_FOR_DELIVERY" || order.status === "PREPARING" ? (
+                    {order.status !== "CANCELLED" && order.status !== "DELIVERED" ? (
                       <Link
                         href={`/tracking?orderId=${order.id}`}
                         onClick={(e) => e.stopPropagation()}

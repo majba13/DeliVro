@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getDatabase, off, onValue, ref } from "firebase/database";
+import { api } from "@/lib/api";
+
+function mapDeliveryStatusToOrderStatus(status?: string) {
+  if (!status) return undefined;
+  if (status === "ASSIGNED") return "CONFIRMED";
+  if (status === "PICKED_UP" || status === "ON_THE_WAY") return "OUT_FOR_DELIVERY";
+  if (status === "DELIVERED") return "DELIVERED";
+  return status;
+}
 
 export function useTrackingSocket(orderId: string) {
   const [payload, setPayload] = useState<Record<string, unknown> | null>(null);
@@ -18,6 +27,44 @@ export function useTrackingSocket(orderId: string) {
     const ws = new WebSocket(`${wsBase}/${orderId}`);
     let sse: EventSource | null = null;
     let firebaseCleanup: (() => void) | null = null;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const pollApiFallback = async () => {
+      try {
+        const [deliveryRes, orderRes] = await Promise.allSettled([
+          api.get<{
+            delivery?: {
+              status?: string;
+              etaMinutes?: number | null;
+              currentLat?: number | null;
+              currentLng?: number | null;
+              lastTrackedAt?: string | null;
+            };
+          }>(`/api/delivery/${orderId}`),
+          api.get<{ order?: { status?: string; estimatedMinutes?: number | null } }>(`/api/orders/${orderId}`),
+        ]);
+
+        const delivery = deliveryRes.status === "fulfilled" ? deliveryRes.value.delivery : undefined;
+        const order = orderRes.status === "fulfilled" ? orderRes.value.order : undefined;
+
+        const statusFromDelivery = mapDeliveryStatusToOrderStatus(delivery?.status);
+        const status = order?.status ?? statusFromDelivery;
+
+        if (status || delivery) {
+          setPayload((prev) => ({
+            ...prev,
+            status,
+            etaMinutes: delivery?.etaMinutes ?? order?.estimatedMinutes ?? null,
+            lat: delivery?.currentLat ?? null,
+            lng: delivery?.currentLng ?? null,
+            updatedAt: delivery?.lastTrackedAt ?? new Date().toISOString(),
+            source: "api-poll",
+          }));
+        }
+      } catch {
+        // Keep existing payload if polling fails
+      }
+    };
 
     const connectFirebaseFallback = () => {
       const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -59,10 +106,15 @@ export function useTrackingSocket(orderId: string) {
     ws.onerror = () => connectFirebaseFallback();
     ws.onclose = () => connectFirebaseFallback();
 
+    // Always keep a polling fallback running so tracking works even when sockets are blocked.
+    pollApiFallback();
+    pollInterval = setInterval(pollApiFallback, 10000);
+
     return () => {
       ws.close();
       sse?.close();
       firebaseCleanup?.();
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [orderId]);
 

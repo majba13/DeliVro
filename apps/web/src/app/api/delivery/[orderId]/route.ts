@@ -55,7 +55,8 @@ export async function GET(
     select: { latitude: true, longitude: true, speed: true, heading: true, recordedAt: true },
   });
 
-  return NextResponse.json({ delivery, pings: pings.reverse() });
+  const orderedPings = pings.reverse();
+  return NextResponse.json({ delivery, pings: orderedPings, locations: orderedPings });
 }
 
 const patchSchema = z.object({

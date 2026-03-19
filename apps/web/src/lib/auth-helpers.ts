@@ -9,6 +9,19 @@ const ACCESS_SECRET = new TextEncoder().encode(
   process.env.JWT_ACCESS_SECRET ?? "dev-access-secret-change-in-production"
 );
 
+const DISPLAY_TO_RAW_ROLE: Record<string, string> = {
+  SuperAdmin: "SUPER_ADMIN",
+  Admin: "ADMIN",
+  ShopOwner: "SHOP_OWNER",
+  DeliveryMan: "DELIVERY_MAN",
+  Customer: "CUSTOMER",
+};
+
+function normalizeRole(role: string | undefined): string {
+  if (!role) return "CUSTOMER";
+  return DISPLAY_TO_RAW_ROLE[role] ?? role;
+}
+
 export interface TokenPayload {
   sub: string;          // userId
   userId: string;       // alias for sub
@@ -29,7 +42,7 @@ export async function requireAuth(
     return {
       sub: payload.sub as string,
       userId: payload.sub as string, // alias for easier access
-      role: payload["role"] as string,
+      role: normalizeRole(payload["role"] as string | undefined),
       email: payload["email"] as string | undefined,
     };
   } catch {
