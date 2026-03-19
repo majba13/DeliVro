@@ -71,7 +71,7 @@ const placeOrderSchema = z.object({
   ownerId: z.string().optional(), // If omitted, derived from first cart item's product owner
   /**
    * Fallback cart items sent by the client when the DB cart sync may have failed
-   * (e.g. products not yet seeded, or a race condition on first add-to-cart).
+    * (e.g. temporary network issues, or a race condition on first add-to-cart).
    * Prices are used as-is; for production you would re-verify them from the DB.
    */
   items: z.array(z.object({
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
   });
 
   // If DB cart is empty, fall back to client-provided items.
-  // This handles the case where cart sync failed (e.g. products not yet seeded in DB).
+  // This handles the case where cart sync failed due to transient issues.
   const effectiveItems = cartItems.length > 0
     ? cartItems
     : (body.data.items ?? []).map((bi) => ({

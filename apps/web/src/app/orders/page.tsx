@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
@@ -48,15 +48,6 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Demo data                                                            */
-/* ------------------------------------------------------------------ */
-const DEMO_ORDERS: Order[] = [
-  { id: "ORD-001", status: "DELIVERED", total: 63.9, paymentMethod: "STRIPE", createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), items: [{ productName: "Fresh Atlantic Salmon", quantity: 2, price: 22.5 }, { productName: "Multi-Vitamin Pack", quantity: 1, price: 18.9 }] },
-  { id: "ORD-002", status: "DISPATCHED", total: 55.2, paymentMethod: "BKASH", createdAt: new Date(Date.now() - 86400000).toISOString(), items: [{ productName: "Organic Basmati Rice 5kg", quantity: 3, price: 11.2 }, { productName: "Green Tea 100 bags", quantity: 2, price: 8.4 }] },
-  { id: "ORD-003", status: "PENDING", total: 34.7, paymentMethod: "COD", createdAt: new Date().toISOString(), items: [{ productName: "Classic Denim Jacket", quantity: 1, price: 34.7 }] },
-];
-
-/* ------------------------------------------------------------------ */
 /* Page                                                                 */
 /* ------------------------------------------------------------------ */
 export default function OrdersPage() {
@@ -76,10 +67,9 @@ export default function OrdersPage() {
     api
       .get<{ orders: Order[] }>("/api/orders/my")
       .then((data) => {
-        if (data.orders?.length) setOrders(data.orders);
-        else setOrders(DEMO_ORDERS);
+        setOrders(data.orders ?? []);
       })
-      .catch(() => setOrders(DEMO_ORDERS))
+      .catch(() => setOrders([]))
       .finally(() => setLoading(false));
   }, [user]);
 

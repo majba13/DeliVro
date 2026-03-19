@@ -136,7 +136,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           const dbItems = data.items.map(normalizeDbItem);
           if (!cancelled) {
             // If the DB cart is still empty after the sync attempt (e.g. when products
-            // have not been seeded yet and the POST /api/cart calls all returned 404),
+            // are unavailable and the POST /api/cart calls all returned 404),
             // restore the in-memory guest items so the user's cart isn't silently wiped.
             setItems(dbItems.length > 0 ? dbItems : guestItems);
           }

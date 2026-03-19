@@ -87,7 +87,6 @@ export default function AdminDashboard() {
     role: "ADMIN",
   });
   const [createAdminLoading, setCreateAdminLoading] = useState(false);
-  const [seedLoading, setSeedLoading] = useState(false);
 
   useEffect(() => {
     if (!isLoading && (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN"))) {
@@ -160,7 +159,8 @@ export default function AdminDashboard() {
     fetchUsers();
   };
 
-  const handleCreateAdmin = async (e: React.FormEvent) => {    e.preventDefault();
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setCreateAdminLoading(true);
     try {
       await api.post("/api/admin/create-admin", createAdminForm);
@@ -171,19 +171,6 @@ export default function AdminDashboard() {
       alert(error.message || "Failed to create admin account");
     } finally {
       setCreateAdminLoading(false);
-    }
-  };
-
-  const handleSeedProducts = async () => {
-    if (!confirm("This will add 12 demo products to the database. Continue?")) return;
-    setSeedLoading(true);
-    try {
-      const res = await api.post<{ message: string; seeded: number }>("/api/admin/seed-products");
-      alert(res.message);
-    } catch (error: any) {
-      alert(error.message || "Failed to seed products");
-    } finally {
-      setSeedLoading(false);
     }
   };
 
@@ -293,14 +280,6 @@ export default function AdminDashboard() {
             icon="🔑"
             onClick={() => document.getElementById("user-table")?.scrollIntoView({ behavior: "smooth" })}
           />
-          {user.role === "SUPER_ADMIN" && (
-            <ActionCard
-              title={seedLoading ? "Seeding…" : "Seed Demo Products"}
-              description="Populate the database with 12 demo products (one-time, only if empty)"
-              icon="🌱"
-              onClick={handleSeedProducts}
-            />
-          )}
         </div>
 
         {/* User Management Section */}

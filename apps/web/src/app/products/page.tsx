@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                                */
@@ -22,24 +22,6 @@ interface Product {
   imageUrl?: string;
   rating?: number;
 }
-
-/* ------------------------------------------------------------------ */
-/* Fallback demo data (shown when API is unavailable)                   */
-/* ------------------------------------------------------------------ */
-const DEMO_PRODUCTS: Product[] = [
-  { id: "1", name: "Fresh Atlantic Salmon", description: "Wild-caught, premium quality", price: 22.5, category: "Food", stock: 40, rating: 4.8 },
-  { id: "2", name: "Organic Basmati Rice 5kg", description: "Aged aromatic basmati", price: 11.2, category: "Groceries", stock: 120, rating: 4.6 },
-  { id: "3", name: "Premium Notebook Set", description: "A5 hardcover, 200 pages", price: 7.8, category: "Stationary", stock: 80, rating: 4.4 },
-  { id: "4", name: "Multi-Vitamin Pack", description: "30-day supply, all essentials", price: 18.9, category: "Medicine", stock: 60, rating: 4.7 },
-  { id: "5", name: "Classic Denim Jacket", description: "Regular fit, stonewash blue", price: 34.7, category: "Wear", stock: 25, rating: 4.5 },
-  { id: "6", name: "Mango Juice 1L x6", description: "100% natural, no added sugar", price: 9.6, category: "Food", stock: 90, rating: 4.3 },
-  { id: "7", name: "Wireless Earbuds", description: "BT 5.3, ANC, 30hr battery", price: 49.99, category: "Electronics", stock: 15, rating: 4.9 },
-  { id: "8", name: "Yoga Mat Pro", description: "Non-slip, 6mm comfort layer", price: 27.0, category: "Sports", stock: 35, rating: 4.6 },
-  { id: "9", name: "Green Tea 100 bags", description: "Premium Japanese sencha", price: 8.4, category: "Groceries", stock: 150, rating: 4.7 },
-  { id: "10", name: "Paracetamol 500mg x20", description: "Fast-acting pain relief", price: 3.5, category: "Medicine", stock: 200, rating: 4.8 },
-  { id: "11", name: "Running Sneakers", description: "Lightweight mesh, size 7-12", price: 62.0, category: "Wear", stock: 20, rating: 4.5 },
-  { id: "12", name: "Ballpoint Pen Set x10", description: "Smooth 0.7mm ink, blue/black", price: 4.2, category: "Stationary", stock: 300, rating: 4.2 },
-];
 
 const CATEGORIES = ["All", "Food", "Groceries", "Medicine", "Wear", "Stationary", "Electronics", "Sports"];
 
@@ -121,7 +103,7 @@ function ProductsContent() {
   const urlCategory = params.get("category") ?? "All";
   const urlQuery = params.get("q") ?? "";
 
-  const [products, setProducts] = useState<Product[]>(DEMO_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState(urlQuery);
   const [category, setCategory] = useState(urlCategory);
@@ -143,10 +125,10 @@ function ProductsContent() {
     api
       .get<{ products: Product[] }>("/api/products")
       .then((data) => {
-        if (!cancelled && data.products?.length) setProducts(data.products);
+        if (!cancelled) setProducts(data.products ?? []);
       })
       .catch(() => {
-        /* keep demo data on error */
+        if (!cancelled) setProducts([]);
       })
       .finally(() => setLoading(false));
     return () => { cancelled = true; };

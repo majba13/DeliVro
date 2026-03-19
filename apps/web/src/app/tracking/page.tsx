@@ -19,8 +19,17 @@ const TIMELINE = [
 
 function TrackingContent() {
   const params = useSearchParams();
-  const orderId = params.get("orderId") ?? "demo-order-1";
+  const orderId = params.get("orderId") ?? "";
   const update = useTrackingSocket(orderId);
+
+  if (!orderId) {
+    return (
+      <section className="container-main py-10">
+        <h1 className="mb-2 text-2xl font-bold">Live Delivery Tracking</h1>
+        <p className="text-sm text-slate-500">Select an active order to track its real-time delivery progress.</p>
+      </section>
+    );
+  }
 
   const currentStatus = (update as { status?: string })?.status ?? "DISPATCHED";
   const currentIdx = TIMELINE.findIndex((s) => s.status === currentStatus);
