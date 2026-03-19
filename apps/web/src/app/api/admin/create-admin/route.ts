@@ -17,6 +17,7 @@ import { SignJWT } from "jose";
 import { z } from "zod";
 import { requireRole, isAuthError } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { validateRealisticUser } from "@/lib/realDataValidation";
 
 const ACCESS_SECRET = new TextEncoder().encode(
   process.env.JWT_ACCESS_SECRET ?? "dev-access-secret-change-in-production"
@@ -59,6 +60,11 @@ export async function POST(req: NextRequest) {
     }
 
     const { name, email, password, role, phone } = body.data;
+
+    const userInputIssue = validateRealisticUser(name, email);
+    if (userInputIssue) {
+      return NextResponse.json({ message: userInputIssue }, { status: 422 });
+    }
 
     // Reject duplicate email
     const existingEmail = await prisma.user.findUnique({ where: { email } });

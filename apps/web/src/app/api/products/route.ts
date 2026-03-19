@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth, isAuthError } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { validateRealisticProduct } from "@/lib/realDataValidation";
 
 const VALID_CATEGORIES = [
   "FOOD", "GROCERIES", "MEDICINE", "EMERGENCY",
@@ -149,6 +150,11 @@ export async function POST(req: NextRequest) {
   }
 
   const { name, description, category, price, discount, unit, stock, shopId, images, tags } = body.data;
+
+  const productInputIssue = validateRealisticProduct({ name, description, tags });
+  if (productInputIssue) {
+    return NextResponse.json({ message: productInputIssue }, { status: 422 });
+  }
 
   // Shop owners can only add products to their own shop
   if (auth.role === "SHOP_OWNER" && shopId) {

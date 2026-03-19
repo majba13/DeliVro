@@ -486,7 +486,7 @@ export default function AdminDashboard() {
                   value={createAdminForm.name}
                   onChange={(e) => setCreateAdminForm((f) => ({ ...f, name: e.target.value }))}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  placeholder="Jane Smith"
+                  placeholder="Enter full name"
                 />
               </div>
               <div>
@@ -497,7 +497,7 @@ export default function AdminDashboard() {
                   value={createAdminForm.email}
                   onChange={(e) => setCreateAdminForm((f) => ({ ...f, email: e.target.value }))}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  placeholder="admin@example.com"
+                  placeholder="Enter email address"
                 />
               </div>
               <div>

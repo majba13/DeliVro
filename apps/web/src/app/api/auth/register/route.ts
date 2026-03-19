@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { validateRealisticUser } from "@/lib/realDataValidation";
 
 const ACCESS_SECRET = new TextEncoder().encode(
   process.env.JWT_ACCESS_SECRET ?? "dev-access-secret-change-in-production"
@@ -53,6 +54,11 @@ const schema = z
 export async function POST(req: NextRequest) {
   try {
     const body = schema.parse(await req.json());
+
+    const userInputIssue = validateRealisticUser(body.name, body.email);
+    if (userInputIssue) {
+      return NextResponse.json({ message: userInputIssue }, { status: 422 });
+    }
 
     // Resolve role
     let dbRole =

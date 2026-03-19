@@ -202,7 +202,7 @@ function ShopForm({ initial, onSuccess, onCancel }: ShopFormProps) {
           <label className="mb-1 block text-sm font-medium">Business Email</label>
           <input type="email" value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            className={field} placeholder="shop@example.com" />
+            className={field} placeholder="Enter business email" />
         </div>
 
         <div>

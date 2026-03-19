@@ -64,7 +64,7 @@ function LoginForm() {
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-              placeholder="you@example.com"
+              placeholder="Enter your email"
             />
           </div>
           <div>

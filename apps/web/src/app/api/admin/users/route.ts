@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth-helpers";
 /**
  * GET /api/admin/users
  * List all users (SuperAdmin/Admin only)
- * Query params: ?role=ADMIN&search=john&isActive=true
+ * Query params: ?role=ADMIN&search=alex&isActive=true
  */
 export async function GET(req: NextRequest) {
   const authResult = await requireAuth(req);

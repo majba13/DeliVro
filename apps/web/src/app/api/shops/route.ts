@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth, isAuthError } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { validateRealisticShop } from "@/lib/realDataValidation";
 
 const VALID_CATEGORIES = [
   "FOOD", "GROCERIES", "MEDICINE", "EMERGENCY",
@@ -119,6 +120,15 @@ export async function POST(req: NextRequest) {
       { message: body.error.errors[0]?.message ?? "Invalid input" },
       { status: 400 }
     );
+  }
+
+  const shopInputIssue = validateRealisticShop({
+    name: body.data.name,
+    description: body.data.description,
+    email: body.data.email,
+  });
+  if (shopInputIssue) {
+    return NextResponse.json({ message: shopInputIssue }, { status: 422 });
   }
 
   // Prevent duplicate shop names per owner

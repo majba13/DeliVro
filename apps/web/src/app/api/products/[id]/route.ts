@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth, isAuthError } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { validateRealisticProduct } from "@/lib/realDataValidation";
 
 const VALID_CATEGORIES = [
   "FOOD", "GROCERIES", "MEDICINE", "EMERGENCY",
@@ -77,6 +78,17 @@ export async function PATCH(
   const body = updateSchema.safeParse(await req.json());
   if (!body.success) {
     return NextResponse.json({ message: body.error.errors[0]?.message ?? "Invalid input" }, { status: 400 });
+  }
+
+  if (body.data.name || body.data.description || body.data.tags) {
+    const productInputIssue = validateRealisticProduct({
+      name: body.data.name ?? product.name,
+      description: body.data.description ?? product.description,
+      tags: body.data.tags ?? product.tags,
+    });
+    if (productInputIssue) {
+      return NextResponse.json({ message: productInputIssue }, { status: 422 });
+    }
   }
 
   const { stock, ...rest } = body.data;

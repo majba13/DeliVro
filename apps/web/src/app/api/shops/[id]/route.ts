@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth, isAuthError } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { validateRealisticShop } from "@/lib/realDataValidation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -71,6 +72,17 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const body = updateSchema.safeParse(await req.json());
   if (!body.success) {
     return NextResponse.json({ message: body.error.errors[0]?.message }, { status: 400 });
+  }
+
+  if (body.data.name || body.data.description || body.data.email) {
+    const shopInputIssue = validateRealisticShop({
+      name: body.data.name ?? shop.name,
+      description: body.data.description ?? shop.description,
+      email: body.data.email ?? shop.email,
+    });
+    if (shopInputIssue) {
+      return NextResponse.json({ message: shopInputIssue }, { status: 422 });
+    }
   }
 
   // Only admins can change approval/active status
